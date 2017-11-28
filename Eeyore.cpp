@@ -5,30 +5,44 @@
 using namespace std;
 
 //class declarations
-class Alarm_Node{
-	public:
-		Node() {};
-		void setAlarm(int aData) { data = aData; };
-		void SetNext(Node* aNext) { next = aNext; };
-		int giveData() { return data; };
-		Node* giveNext() { return next; };
-
-	private:
-		Alarm alarm;
-		node *next;
-};	
 class Alarm{
 	public:
 	
-	const static string DEFAULT_SONG_FILE;
+		static string DEFAULT_SONG_FILE;
 	
-	int alarmTime;
-	int timeOngoing;
-	bool ongoing;
-	string songFile;
+	private:
+		string songFile;
+		int alarmTime;
+		int timeOngoing;
+		bool ongoing;
 	
 	
-}
-const string Alarm::DEFAULT_SONG_FILE = "DEFAULT_ALARM.wav";
+};
 
-  
+class Alarm_Node{
+	public:
+		Alarm_Node() {};
+		void setAlarm(int aData);
+		void SetNext(Alarm_Node* aNext);
+		int giveData();
+		Alarm_Node* giveNext();
+
+	private:
+		Alarm alarm;
+		Alarm_Node *next;
+};	
+class Alarm_LL{
+			
+	public:
+		bool addAlarm(Alarm a);
+		bool delAlarm(int pos);
+		bool readList();
+		//bool writeList();
+		void displayList();
+		
+	private:
+		Alarm_Node* head;
+		int length;
+};
+int main(const int argc, const char* const argv[]) {
+}
