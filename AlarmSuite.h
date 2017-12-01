@@ -9,33 +9,17 @@ class Alarm{
 	public:
 		//static string DEFAULT_SONG_FILE;
 		int tick();
-		Alarm(int hour, int minute, bool m, bool t, bool w, bool th, bool f, bool sa, bool su);
+		Alarm(int hour, int minute, string sch);
 	private:
 		//string songFile;
 		int timeOngoing;
 		bool ongoing;
 		
 		const int alarmTime;	
-		const bool mon;
-		const bool tue;
-		const bool wed;
-		const bool thu;
-		const bool fri;
-		const bool sat;
-		const bool sun;
+		const string schedule;
 };
-class Alarm_Node{
-	public:
-		Alarm_Node(const Alarm a, Alarm_Node* anext) {};
-		int setNext(Alarm_Node* aNext);
-		const Alarm giveAlarm();
-		Alarm_Node* giveNext();
 
-	private:
-		const Alarm alarm;
-		Alarm_Node* next;
-};	
-class Alarm_LL{
+class AlarmList{
 	public:
 		int Alarm_LL();
 		int addAlarm(Alarm a);
@@ -45,7 +29,7 @@ class Alarm_LL{
 		int displayList();
 		
 	private:
-		Alarm_Node* head;
+		Alarm* alarms;
 		int length;
 };
 #endif

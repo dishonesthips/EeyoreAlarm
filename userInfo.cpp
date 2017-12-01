@@ -14,7 +14,6 @@ class UserInfo {
 		string getEmail();
 		void writeInfo();
 		void readInfo();
-		void capitalize();
 		
 	private:
 		//declare private variables
@@ -22,6 +21,7 @@ class UserInfo {
 		string email;
 		
 		//error check methods do not require an instance of a class
+		void capitalize();
 		static int checkName(const string input);
 		static int checkEmail(const string input);
 };
@@ -86,6 +86,7 @@ void UserInfo::readInfo() {
 		email += line[i];
 		i++;
 	}
+	capitalize();
 }
 
 //check to see if text file already exists
@@ -243,7 +244,6 @@ int main() {
 	if (user1.checkFileExists()) {
 		user1.writeInfo();
 		user1.readInfo();
-		user1.capitalize();
 		cout << user1.getName() << " " << user1.getEmail() << endl;
 	}
 	
