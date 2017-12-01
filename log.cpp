@@ -5,9 +5,7 @@
 
 using namespace std;
 
-enum SEVERITY {TRACE, DEBUG, INFO, WARNING, FATAL};
-
-int log(const string source, const string message, const SEVERITY severity) {
+int log(const string message, const string severity) {
 	//initialize time and set to local
 	time_t now = time(0);
 	tm* ltm = localtime(&now);
@@ -24,12 +22,14 @@ int log(const string source, const string message, const SEVERITY severity) {
 		return -1; // Unable to open file
 	}
 	
-	logfile << asctime(ltm) << "\r\n" << "Source: " << source << "\r\n" << message << "\r\n" << severity << "\r\n\r\n";
+	logfile << (ltm->tm_year + 1900) << "-" << (ltm->tm_mon + 1) << "-" << ltm->tm_mday << "\t" 
+			<< ltm->tm_hour << ":" << ltm->tm_min << ":" << ltm->tm_sec << "\t\t(" << severity << "):\t " << message << "\r\n";
 	logfile.close();
 	
 	return 0;
 }
 
 int main() {
-	log("hello.exe", "REEEE", FATAL);
+	log("REEEE", "FATAL");
+	log("REEEE", "WARNING");
 }
