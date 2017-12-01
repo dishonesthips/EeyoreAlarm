@@ -5,9 +5,13 @@
 using namespace std;
 
 string* readInfo() {
-	//check to see if the file already exists, error
+	//check to see if the file does not exists, error
 	ifstream infile;
 	infile.open("userInfo.txt");
+	if(!infile.is_open()) {
+		cerr << "Error: File does not exist" << endl;
+		return NULL;
+	}
 	
 	string* userInfo = new string[2];
 	string line;
