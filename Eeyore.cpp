@@ -58,9 +58,6 @@ int main(const int argc, const char* const args[]){
 	gpioSetup(BUZZER_PIN, 0);
 
 	while (!exit){
-		//get exit button status
-		int exitVal = gpio_get_value(EXIT_PIN);
-
 		cout<<"\n\tWelcome to Eeyore, <YOUR NAME HERE>,\n\n\t"
 			<<"1. Run Alarm System\n\t"
 			<<"2. Add an Alarm\n\t"
@@ -80,13 +77,20 @@ int main(const int argc, const char* const args[]){
 		*/
 
 		if(menuAnswer[0] == '1'){
-			//check for alarm trigger
-			int triggerVal = gpio_get_value(TRIGGER_PIN);
-			if (triggerVal == 1) {
-				//turn off alarm
-				gpio_set_value(TRIGGER_PIN, 0);
+			while (true) {
+				cout << "Loop 1" << endl;
+				//check button statuses
+				int triggerVal = gpio_get_value(TRIGGER_PIN);
+				int exitVal = gpio_get_value(EXIT_PIN);
+				if (triggerVal == 1) {
+					//turn off alarm
+					gpio_set_value(TRIGGER_PIN, 0);
+				}
+				if (exitVal == 1) {
+					//exit
+					break; //YOLO
+				}
 			}
-				
 		}
 
 		else if(menuAnswer[0] == '2'){
@@ -101,7 +105,7 @@ int main(const int argc, const char* const args[]){
 		else if(menuAnswer[0] == '5'){
 			
 		}
-		else if(menuAnswer[0] == '6' || exitVal == 1){
+		else if(menuAnswer[0] == '6'){
 			exit = true;
 		}
 		
