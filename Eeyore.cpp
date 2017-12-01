@@ -7,36 +7,55 @@
 
 using namespace std;
 
-//the pin used for the exit button
+//GPIO pin numbers
 const int EXIT_PIN = 0;
+const int TRIGGER_PIN = 1;
+const int BUZZER_PIN = 11;
 
-int main(const int argc, const char* const args[]){
-	bool exit = false;
-	//gpio pin variables
+//function for setting up GPIO pins
+//for pinMode zero is output, non-zero is input
+int gpioSetup(const int pinNum, const int pinMode) {
+	//variables for ???
 	int rq;
 	int rv;
-
-	//set up gpio pin
-	if ((rq = gpio_is_requested(EXIT_PIN)) < 0) {
-		cerr << "Error: GPIO pin " << EXIT_PIN << " already in use." << endl;
+	//check if pin is already in use
+	if ((rq = gpio_is_requested(pinNum)) < 0) {
+		cerr << "Error: GPIO pin " << pinNum << " already in use." << endl;
 		//log something here
 		return -1;
 	}
-
-	//export gpio pin
+	//export pin
 	if (!rq) {
-		if ((rv = gpio_request(EXIT_PIN, NULL)) < 0) {
-			cerr << "Error: GPIO pin " << EXIT_PIN << 
+		if ((rv = gpio_request(pinNum, NULL)) < 0) {
+			cerr << "Error: GPIO pin " << pinNum << 
 				" could not be exported." << endl;
 			return -1;
 			//log here
 		}
 	}
-
-	//set exit button as input
-	if ((rv = gpio_direction_input(EXIT_PIN)) < 0) {
-		cerr << "Error: GPIO pin " << EXIT_PIN << " could not be set as output." << endl;
+	//set pin to input or output
+	if (pinMode == 0) {
+		if ((rv = gpio_direction_input(pinNum)) < 0) {
+			cerr << "Error: GPIO pin " << pinNum << " could not be set as input." << endl;
+			//log something here
+			return -1;
+		}
+	} else {
+		if ((rv = gpio_direction_output(pinNum, 1)) < 0) {
+			cerr << "Error: GPIO pin " << pinNum << " could not be set as output." << endl;
+			//log something here
+			return -1;
+		}
 	}
+}
+
+int main(const int argc, const char* const args[]){
+	bool exit = false;
+
+	//set up GPIO pins
+	gpioSetup(EXIT_PIN, 1);
+	gpioSetup(TRIGGER_PIN, 1);
+	gpioSetup(BUZZER_PIN, 0);
 
 	while (!exit){
 		//get exit button status
@@ -61,7 +80,13 @@ int main(const int argc, const char* const args[]){
 		*/
 
 		if(menuAnswer[0] == '1'){
-
+			//check for alarm trigger
+			int triggerVal = gpio_get_value(TRIGGER_PIN);
+			if (triggerVal == 1) {
+				//turn off alarm
+				gpio_set_value(TRIGGER_PIN, 0);
+			}
+				
 		}
 
 		else if(menuAnswer[0] == '2'){
@@ -85,6 +110,6 @@ int main(const int argc, const char* const args[]){
 
 	}
 	cout<<"\n\tThanks for using Eeyore! Sweet Dreams!"<<endl;
-
+	return 0;
 
 }
