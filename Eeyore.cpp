@@ -16,7 +16,7 @@ int main(const int argc, const char* const args[]){
 			<<"4. Update User Info\n\t"
 			<<"5. View Statistics\n\t"
 			<<"6. Exit\n\n\t"
-			<<"Please enter a number corresponding to one of the options:"
+			<<"Please enter a number corresponding to one of the options: ";
 		
 		string menuAnswer;
 		getline(cin, menuAnswer);
@@ -49,7 +49,7 @@ int main(const int argc, const char* const args[]){
 
 		
 	}
-	cout<<"Thanks for using Eeyore! Sweet Dreams!"<<endl;
+	cout<<"\n\tThanks for using Eeyore! Sweet Dreams!"<<endl;
 	
 	
 	
