@@ -7,6 +7,8 @@
 
 using namespace std;
 
+//the pin used for the exit button
+const int EXIT_PIN = 0;
 
 int main(const int argc, const char* const args[]){
 	bool exit = false;
