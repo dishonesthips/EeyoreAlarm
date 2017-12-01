@@ -8,6 +8,7 @@ const string uInfoFileName = "userInfo.txt";
 const string statFileName = "stats.txt";
 const string alarmFileName = "alarms.txt";
 enum SEVERITY {TRACE, DEBUG, INFO, WARNING, FATAL};
+/*
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -56,14 +57,14 @@ int gpioSetup(const int pinNum, const int pinMode) {
 		}
 	}
 }
-
-int log(const string source, const string message, const SEVERITY severity);
+*/
+int log(const string message, const string severity);
 int writeInfo(const string name, const string email);
 int checkName(const string name);
 int checkEmail(const string email);
 string capitalize(const string name);
 
-int log(const string source, const string message, const SEVERITY severity) {
+int log(const string severity, const string message) {
 	//initialize time and set to local
 	time_t now = time(0);
 	tm* ltm = localtime(&now);
@@ -80,7 +81,8 @@ int log(const string source, const string message, const SEVERITY severity) {
 		return -1; // Unable to open file
 	}
 	
-	logfile << asctime(ltm) << "\r\n" << "Source: " << source << "\r\n" << message << "\r\n" << severity << "\r\n\r\n";
+	logfile << (ltm->tm_year + 1900) << "-" << (ltm->tm_mon + 1) << "-" << ltm->tm_mday << "\t" 
+			<< ltm->tm_hour << ":" << ltm->tm_min << ":" << ltm->tm_sec << "\t\t(" << severity << "):\t " << message << "\r\n";
 	logfile.close();
 	
 	return 0;
@@ -293,16 +295,12 @@ int main(const int argc, const char* const args[]){
 	//name = info[0];
 	//email = info[1];
 	
-	cout <<"\n\tWelcome to Eeyore, <YOUR NAME HERE>!"<<endl;
-	while (!exit){
-		
-		cout<<"\n\tMain Menu\n\n\t"
-
+/*
 	//set up GPIO pins
 	gpioSetup(EXIT_PIN, 1);
 	gpioSetup(TRIGGER_PIN, 1);
 	gpioSetup(BUZZER_PIN, 0);
-
+*/
 	while (!exit){
 		cout<<"\n\tWelcome to Eeyore, <YOUR NAME HERE>,\n\n\t"
 			<<"1. Run Alarm System\n\t"
@@ -325,6 +323,7 @@ int main(const int argc, const char* const args[]){
 	
 
 		if(menuAnswer[0] == '1'){//Run Alarm
+		/*
 			while (true) {
 				cout << "Loop 1" << endl;
 				//check button statuses
@@ -339,6 +338,7 @@ int main(const int argc, const char* const args[]){
 					break; //YOLO
 				}
 			}
+			*/
 		}
 
 		else if(menuAnswer[0] == '2'){//Add an Alarm
@@ -357,10 +357,11 @@ int main(const int argc, const char* const args[]){
 			
 		}
 		else if(menuAnswer[0] == '6'){//Exit
+			log("TRACE","Manual request to exit program");
 			exit = true;
 		}
 		else{
-			//log warning error with checkMenuAnswer code
+			log("WARNING","Error checking menuAnswer went wrong, treated as if exit request;");
 			exit = true;
 		}
 
