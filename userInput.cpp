@@ -11,11 +11,10 @@ string capitalize(const string name);
 
 int writeInfo(const string name, const string email) {
 	//declare filename to be written to
-	const char filename[] = "userinput.txt";
 	
 	//check to see if the file already exists, error
 	ifstream infile;
-	infile.open(filename);
+	infile.open(uInfoFileName);
 	if(infile.is_open()) {
 		cerr << "Error: File already exists" << endl;
 		return -1;
@@ -25,7 +24,7 @@ int writeInfo(const string name, const string email) {
 	string newName = capitalize(name);
 	
 	ofstream outfile; // declare the file object
-	outfile.open(filename); // open the file
+	outfile.open(uInfoFileName); // open the file
 	if (!outfile.is_open()) {
 		cerr << "Unable to open file" << endl;
 		return -1; // Unable to open file

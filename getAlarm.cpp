@@ -9,7 +9,7 @@ using namespace std;
 int writeAlarm(const string name, const string alarm);
 int checkName(const string name);
 int checkAlarm(const string alarm);
-int checkAlarmSetting(const string setting);
+int checkRange(const string setting, char lower, char higher);
 int checkDate(const string date, const string alarmTime);
 string setAlarmSetting(const int option, const string alarm);
 int stringToInt(string str);
@@ -17,10 +17,9 @@ int stringToInt(string str);
 
 int writeAlarm(const string name, const string alarm, const string setting, const string settingData) {
 	//declare filename to be written to
-	const char filename[] = "alarmdata.txt";
 	
 	ofstream outfile; // declare the file object
-	outfile.open(filename); // open the file
+	outfile.open(alarmFileName); // open the file
 	if (!outfile.is_open()) {
 		cerr << "Unable to open file" << endl;
 		return -1; // Unable to open file
@@ -32,31 +31,6 @@ int writeAlarm(const string name, const string alarm, const string setting, cons
 	return 0;
 }
 
-int checkName(const string name) {
-	//check for empty string
-	if (name.empty()) {
-		cerr << "Error: Empty string!" << endl;
-		return -2;
-	}
-	
-	//test print name COMMENT OUT OF FINAL COPY
-	cout << "Recieved name: ";
-	for (int i = 0; i < name.length(); i++) {
-		cout << name[i] << " ";
-	}
-	cout << endl;
-	
-	//check for  (weird bug involving cin operator)
-	for (int i = 0; i < name.length(); i++) {
-		if (name[i] == '') {
-			cerr << "Don't use arrow keys!" << endl;
-			return -2;
-		}
-	}
-	
-	//valid name
-	return 0;
-}
 
 int checkAlarm(const string alarm) {
 	//check alarm for empty string
@@ -133,7 +107,7 @@ int checkAlarm(const string alarm) {
 	return 0;
 }
 
-int checkAlarmSetting(const string setting) {
+int checkRange(const string setting, char lower, char higher) {
 	//check setting for empty string
 	if (setting.empty()) {
 		cerr << "Error: Empty string!" << endl;
@@ -153,12 +127,11 @@ int checkAlarmSetting(const string setting) {
 		cerr << "Error: Invalid option" << endl;
 		return -4;
 	}
-	else if (setting[0] < '1' || setting[0] > '5') {
+	else if (setting[0] < lower || setting[0] > higher) {
 		cerr << "Error: Invalid option" << endl;
 		return -4;
 	}
 	
-	//1 2 3 4 5
 	return 0;
 }
 
@@ -394,7 +367,7 @@ int main() {
 	cout << "Alarm setting:" << endl << "1) Everyday" << endl << "2) Weekdays" << endl << "3) Weekends" 
 		<< endl << "4) Date" << endl << "5) Custom" << endl << "Enter your setting: ";
 	getline(cin, setting);
-	while (checkAlarmSetting(setting)) {
+	while (checkRange(setting)) {
 		cerr << "Please enter a valid setting (1, 2, 3, 4, or 5): ";
 		getline(cin, setting);
 	}
@@ -406,5 +379,32 @@ int main() {
 	cout << (writeAlarm(name, alarm, setting, setAlarmSetting(option, alarm))) << endl;
 	
 	//NICE
+	return 0;
+}
+
+
+int checkName(const string name) {
+	//check for empty string
+	if (name.empty()) {
+		cerr << "Error: Empty string!" << endl;
+		return -2;
+	}
+	
+	//test print name COMMENT OUT OF FINAL COPY
+	cout << "Recieved name: ";
+	for (int i = 0; i < name.length(); i++) {
+		cout << name[i] << " ";
+	}
+	cout << endl;
+	
+	//check for  (weird bug involving cin operator)
+	for (int i = 0; i < name.length(); i++) {
+		if (name[i] == '') {
+			cerr << "Don't use arrow keys!" << endl;
+			return -2;
+		}
+	}
+	
+	//valid name
 	return 0;
 }
