@@ -1,6 +1,11 @@
 #include <iostream>
 #include <string>
 #include <fstream>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <ugpio/ugpio.h>
+
 using namespace std;
 
 const string logFileName = "log.txt";
@@ -8,13 +13,6 @@ const string uInfoFileName = "userInfo.txt";
 const string statFileName = "stats.txt";
 const string alarmFileName = "alarms.txt";
 enum SEVERITY {TRACE, DEBUG, INFO, WARNING, FATAL};
-/*
-#include <stdlib.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <ugpio/ugpio.h>
-
-using namespace std;
 
 //GPIO pin numbers
 const int EXIT_PIN = 0;
@@ -57,7 +55,7 @@ int gpioSetup(const int pinNum, const int pinMode) {
 		}
 	}
 }
-*/
+
 int log(const string message, const string severity);
 int writeInfo(const string name, const string email);
 int checkName(const string name);
@@ -295,12 +293,12 @@ int main(const int argc, const char* const args[]){
 	//name = info[0];
 	//email = info[1];
 	
-/*
+
 	//set up GPIO pins
 	gpioSetup(EXIT_PIN, 1);
 	gpioSetup(TRIGGER_PIN, 1);
 	gpioSetup(BUZZER_PIN, 0);
-*/
+
 	while (!exit){
 		cout<<"\n\tWelcome to Eeyore, <YOUR NAME HERE>,\n\n\t"
 			<<"1. Run Alarm System\n\t"
@@ -323,7 +321,7 @@ int main(const int argc, const char* const args[]){
 	
 
 		if(menuAnswer[0] == '1'){//Run Alarm
-		/*
+		
 			while (true) {
 				cout << "Loop 1" << endl;
 				//check button statuses
@@ -338,7 +336,7 @@ int main(const int argc, const char* const args[]){
 					break; //YOLO
 				}
 			}
-			*/
+			
 		}
 
 		else if(menuAnswer[0] == '2'){//Add an Alarm
