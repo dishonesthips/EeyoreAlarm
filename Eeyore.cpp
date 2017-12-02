@@ -510,6 +510,13 @@ int AlarmList::writeList(){ //appends an alarm to the file of alarms
 	return 0;
 }
 int AlarmList::runAlarm(){
+	
+	//int exitVal;
+	int rqExit;
+	//int triggerVal;
+	int rqTrigger;
+	int rqBuzzer;
+
 	bool exitButtonHit= false;
 	const int sleepTime = 1;
 	time_t now = time(0);
