@@ -9,21 +9,21 @@ class UserInfo {
 		UserInfo();	//declare constructor
 		
 		//declare functions
-		void writeInfo(string name, string email);
-		void readInfo();
 		int checkFileExists();
-		void capitalize();
 		string getName();
 		string getEmail();
-		
-		//error check methods do not require an instance of a class
-		static int checkName(const string input);
-		static int checkEmail(const string input);
+		void writeInfo();
+		void readInfo();
 		
 	private:
 		//declare private variables
 		string name;
 		string email;
+		
+		//error check methods do not require an instance of a class
+		void capitalize();
+		static int checkName(const string input);
+		static int checkEmail(const string input);
 };
 
 //constructor
@@ -33,7 +33,26 @@ UserInfo::UserInfo() {
 }
 
 //write info to a file with paramters info
-void UserInfo::writeInfo(string nameFile, string emailFile) {
+void UserInfo::writeInfo() {
+	//declare strings to be written to file
+	string nameFile;
+	string emailFile;
+	
+	//get name
+	cout << "What is your name? ";
+	getline(cin, nameFile);
+	while (UserInfo::checkName(nameFile)) {
+		cout << "name: ";
+		getline(cin, nameFile);
+	}
+	
+	//get email
+	cout << "What is your email? ";
+	getline(cin, emailFile);
+	while (UserInfo::checkEmail(emailFile)) {
+		cout << "email: ";
+		getline(cin, emailFile);
+	}
 	//write to file
 	ofstream outfile;
 	outfile.open(filename);
@@ -67,6 +86,7 @@ void UserInfo::readInfo() {
 		email += line[i];
 		i++;
 	}
+	capitalize();
 }
 
 //check to see if text file already exists
@@ -219,34 +239,13 @@ string UserInfo::getEmail() {
 
 //sample usage of object UserInfo shown in main
 int main() {
-	string name;
-	string email;
 	UserInfo user1;
 	
-	cout << "name: ";
-	getline(cin, name);
-	while (UserInfo::checkName(name)) {
-		cout << "name: ";
-		getline(cin, name);
-	}
-	
-	cout << "email: ";
-	getline(cin, email);
-	while (UserInfo::checkEmail(email)) {
-		cout << "email: ";
-		getline(cin, email);
-	}
 	if (user1.checkFileExists()) {
+		user1.writeInfo();
 		user1.readInfo();
-		cout << endl << user1.getName() << " " << user1.getEmail() << endl;
-		user1.writeInfo(name, email);
-		user1.readInfo();
-		cout << user1.getName() << " " << user1.getEmail() << endl << endl;
+		cout << user1.getName() << " " << user1.getEmail() << endl;
 	}
-	user1.writeInfo("borna houmani-farahani'suprem", "borna@email.ca");
-	user1.readInfo();
-	user1.capitalize();
-	cout << user1.getName() << " " << user1.getEmail() << endl;
 	
 	return 0;
 }
