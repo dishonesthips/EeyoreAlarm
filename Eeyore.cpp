@@ -2,6 +2,7 @@
 #include <string>
 #include <fstream>
 #include <math.h>
+#include <unistd.h>
 #include <ugpio/ugpio.h>
 
 using namespace std;
@@ -11,6 +12,7 @@ const string statFileName = "stats.txt";
 //gpio pin numbers
 const int EXIT_PIN = 0;
 const int TRIGGER_PIN = 1;
+const int BUZZER_PIN = 11;
 
 //global function declarations
 int log(const string message, const string severity);
@@ -904,7 +906,7 @@ int gpioSetup(const int pinNum, int &rq, const int pinMode) {
 			return -1;
 		}
 	} else {
-		if ((rv = gpio_direction_output(pinNum, 1)) < 0) {
+		if ((rv = gpio_direction_output(pinNum, 0)) < 0) {
 			cerr << "Error: GPIO pin " << pinNum <<
 			       "could not be set as output." << endl;
 			return -1;
@@ -987,7 +989,7 @@ int stringToInt(const string str){
 	
 	return num;
 }
-int main(const int argc, const char* const args[]){
+int main(){
 	bool exit = false;
 	UserInfo user;
 	int exitVal;
@@ -1008,6 +1010,14 @@ int main(const int argc, const char* const args[]){
 		cerr << "Error: GPIO could not be initialised." << endl;
 		return -1;
 	}
+	//test read
+	cout << "Exit: " << gpio_get_value(EXIT_PIN) << endl;
+	cout << "Trigger: " << gpio_get_value(TRIGGER_PIN) << endl;
+	//test write
+	cout << "Alarm test" << endl;
+	gpio_set_value(BUZZER_PIN, 1);
+	sleep(1);
+	gpio_set_value(BUZZER_PIN, 0);
 	
 	if (user.fileNotExist()) { 
 		cout<<"\n\tWelcome to Eeyore! Is this your first time?\n\tI don't recognize you...\n\n";
@@ -1017,7 +1027,6 @@ int main(const int argc, const char* const args[]){
 	//cout << user.getName() << " " << user.getEmail() << endl;
 
 	while (!exit){
-		
 		
 		cout<<"\tWelcome to Eeyore, "<<user.getName()<<"\n\n\t"
 			<<"1. Run Alarm System\n\t"
