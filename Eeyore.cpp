@@ -12,50 +12,8 @@ const string statFileName = "stats.txt";
 //global function declarations
 int log(const string message, const string severity);
 int checkRange(const string setting, const char lower, const char higher);
-int gpioSetup(const int pinNum, int &rq, const int pinMode) {
-	int rv;
-	// check if gpio is already exported
-	if ((rq = gpio_is_requested(pinNum)) < 0) {
-		cerr << "Error: GPIO pin " << pinNum << " is already in use."
-			<< endl;
-		return -1;
-	}
-	// export the gpio
-	if (!rq) {
-		if ((rv = gpio_request(pinNum, NULL)) < 0) {
-			cerr << "Error: GPIO pin " << pinNum <<
-				" could not be exported." << endl;
-			return -1;
-		}
-	}
-	// set to input direction
-	if (pinMode == 0) {
-		if ((rv = gpio_direction_input(pinNum)) < 0) {
-			cerr << "Error: GPIO pin " << pinNum <<
-				" could not be set as input." << endl;
-			return -1;
-		}
-	} else {
-		if ((rv = gpio_direction_output(pinNum, 0)) < 0) {
-			cerr << "Error: GPIO pin " << pinNum <<
-			       "could not be set as output." << endl;
-			return -1;
-		}
-	}
-	return 0;
-}
-int gpioRelease(const int pinNum, int &rq) {
-	if (!rq) {
-		if (gpio_free(pinNum) < 0) {
-			cerr << "Error: Could not free GPIO pin " << pinNum <<
-				endl;
-			return -1;
-		}
-		return 0;
-	}
-	return 1;
-}
-
+int gpioSetup(const int pinNum, int &rq, const int pinMode);
+int gpioRelease(const int pinNum, int &rq);
 
 
 //class declarations
@@ -132,7 +90,14 @@ class AlarmList{
 		static int checkYesOrNo(const string yn);
 		static string setAlarmSetting(const int option, const string alarm);
 };
-
+class Log {
+	public:
+		Log();
+		void log(string, string);
+		
+	private:
+		string filename;
+};
 
 //UserInfo member function definitions
 UserInfo::UserInfo(){ //constructor
@@ -331,6 +296,7 @@ string UserInfo::getName(){ //getter name
 string UserInfo::getEmail(){//getter email
 	return email;
 }
+
 //Alarm member function definitions
 Alarm::Alarm(){
 	alarmTime = -1;
@@ -403,6 +369,7 @@ string Alarm::displayAlarm() {
 	
 	return formatSched;
 }
+
 //AlarmList member function declarations
 AlarmList::AlarmList(){
 	alarms = NULL;
@@ -511,9 +478,10 @@ int AlarmList::writeList(){ //appends an alarm to the file of alarms
 }
 int AlarmList::runAlarm(){
 	
-	//int exitVal;
+	int exitVal;
+	int triggerVal;
+
 	int rqExit;
-	//int triggerVal;
 	int rqTrigger;
 	int rqBuzzer;
 
@@ -546,12 +514,16 @@ int AlarmList::runAlarm(){
 		sleep(sleepTime);
 		cout << "\tCurrent time: " << (ltm->tm_hour) << ":" << (ltm->tm_min) << ":" << (ltm->tm_sec) << endl;
 		
-		if(gpio_get_value(EXIT_PIN))
+		exitVal = gpio_get_value(EXIT_PIN)
+		triggerVal = gpio_get_value(TRIGGER_PIN);
+		
+		
+		if(exitVal)
 			exitButtonHit = true;
 		
-	//	for (int i = 0; i < length; i++){
-		//	buzzerSum += alarms[i].tick(ltm, 0) //read motionstate
-		//}
+		for (int i = 0; i < length; i++){
+			buzzerSum += alarms[i].tick(ltm, triggerVal) //read motionstate
+		}
 		
 		//if (buzzerSum){
 			//output buzzer 1
@@ -563,6 +535,7 @@ int AlarmList::runAlarm(){
 		
 		
 	}
+	
 	gpioRelease(EXIT_PIN, rqExit);
 	gpioRelease(TRIGGER_PIN, rqTrigger);
 	gpioRelease(BUZZER_PIN, rqBuzzer);
@@ -672,7 +645,7 @@ int AlarmList::delAlarm(){ //remove an alarm from the list of alarms
 	}
 		
 }
-int AlarmList::displayList() { // display list of alarms, user-friendly
+int AlarmList::displayList(){ // display list of alarms, user-friendly
 	
 	if (length){
 		cout<<"\n\tThe following are your alarm(s):\n";
@@ -975,7 +948,7 @@ int AlarmList::checkDate(const string date, const string alarm){
 	//freak off???
 	return 0;
 }
-int AlarmList::checkYesOrNo(const string yn) {//error checks yes or no input
+int AlarmList::checkYesOrNo(const string yn){//error checks yes or no input
 	//check for empty string
 	if (yn.empty()) {
 		cerr << "Error: Empty string!" << endl;
@@ -1003,6 +976,36 @@ int AlarmList::checkYesOrNo(const string yn) {//error checks yes or no input
 	}
 	
 	return 0;
+}
+
+//Log member function declarations
+void Log::Log(){
+	//initialize time and set to local
+	time_t now = time(0);
+	tm* ltm = localtime(&now);
+	
+	//declare filename to be written to
+	filename = to_string(ltm->tm_year + 1900) + "-" + to_string(ltm->tm_mday) + "-" + to_string(ltm->tm_mon + 1) + "-" +
+							to_string(ltm->tm_hour) + "-" + to_string(ltm->tm_min) + "-" + to_string(ltm->tm_sec) + ".log";
+							
+	ofstream logfile; // declare the file object
+	logfile.open(filename, ios::app | ios::out); // open the file
+	logfile.close();
+}
+void Log::log(string a, string b) {
+	ofstream logfile; // declare the file object
+	logfile.open(filename, ios::app | ios::out); // open the file
+	
+	//initialize time and set to local
+	time_t now = time(0);
+	tm* ltm = localtime(&now);
+	
+
+
+	//write data ato log
+	logfile << (ltm->tm_year + 1900) << "-" << (ltm->tm_mon + 1) << "-" << ltm->tm_mday << "\t" 
+			<< ltm->tm_hour << ":" << ltm->tm_min << ":" << ltm->tm_sec << "\t(" << a << "):\t " << b << "\r\n";
+	logfile.close();
 }
 
 //global function definitions
@@ -1057,29 +1060,63 @@ int log(const string severity, const string message) {
 	
 	return 0;
 }
-int stoi(const string str){
-	int num = 0;
-	int count = 0;
-	
-	for (int i = str.length() - 1; i >= 0; i--) {
-		num = num + (str[i] - '0') * pow(10, count);
-		count++;
+int gpioSetup(const int pinNum, int &rq, const int pinMode) {
+	int rv;
+	// check if gpio is already exported
+	if ((rq = gpio_is_requested(pinNum)) < 0) {
+		cerr << "Error: GPIO pin " << pinNum << " is already in use."
+			<< endl;
+		return -1;
 	}
-	
-	return num;
+	// export the gpio
+	if (!rq) {
+		if ((rv = gpio_request(pinNum, NULL)) < 0) {
+			cerr << "Error: GPIO pin " << pinNum <<
+				" could not be exported." << endl;
+			return -1;
+		}
+	}
+	// set to input direction
+	if (pinMode == 0) {
+		if ((rv = gpio_direction_input(pinNum)) < 0) {
+			cerr << "Error: GPIO pin " << pinNum <<
+				" could not be set as input." << endl;
+			return -1;
+		}
+	} else {
+		if ((rv = gpio_direction_output(pinNum, 0)) < 0) {
+			cerr << "Error: GPIO pin " << pinNum <<
+			       "could not be set as output." << endl;
+			return -1;
+		}
+	}
+	return 0;
 }
+int gpioRelease(const int pinNum, int &rq) {
+	if (!rq) {
+		if (gpio_free(pinNum) < 0) {
+			cerr << "Error: Could not free GPIO pin " << pinNum <<
+				endl;
+			return -1;
+		}
+		return 0;
+	}
+	return 1;
+}
+
 int main(const int argc, const char* const args[]){
 	bool exit = false;
 	UserInfo user;
 	AlarmList alarmList;
 	alarmList.readList();
 	
-	if (user.fileNotExist()) { 
+	if (user.fileNotExist()) {
 		cout<<"\n\tWelcome to Eeyore! Is this your first time?\n\tI don't recognize you...\n\n";
 		user.writeInfo();
 	}
 	user.readInfo();
 	//cout << user.getName() << " " << user.getEmail() << endl;
+	cout<<"\n\n\n\t_____________________________\n\n\n\n";
 
 	while (!exit){
 		
