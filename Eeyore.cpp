@@ -3,6 +3,8 @@
 #include <fstream>
 #include <math.h>
 #include <unistd.h>
+#include <ugpio/ugpio.h>
+
 using namespace std;
 
 const string statFileName = "stats.txt";
@@ -10,6 +12,51 @@ const string statFileName = "stats.txt";
 //global function declarations
 int log(const string message, const string severity);
 int checkRange(const string setting, const char lower, const char higher);
+int gpioSetup(const int pinNum, int &rq, const int pinMode) {
+	int rv;
+	// check if gpio is already exported
+	if ((rq = gpio_is_requested(pinNum)) < 0) {
+		cerr << "Error: GPIO pin " << pinNum << " is already in use."
+			<< endl;
+		return -1;
+	}
+	// export the gpio
+	if (!rq) {
+		if ((rv = gpio_request(pinNum, NULL)) < 0) {
+			cerr << "Error: GPIO pin " << pinNum <<
+				" could not be exported." << endl;
+			return -1;
+		}
+	}
+	// set to input direction
+	if (pinMode == 0) {
+		if ((rv = gpio_direction_input(pinNum)) < 0) {
+			cerr << "Error: GPIO pin " << pinNum <<
+				" could not be set as input." << endl;
+			return -1;
+		}
+	} else {
+		if ((rv = gpio_direction_output(pinNum, 0)) < 0) {
+			cerr << "Error: GPIO pin " << pinNum <<
+			       "could not be set as output." << endl;
+			return -1;
+		}
+	}
+	return 0;
+}
+int gpioRelease(const int pinNum, int &rq) {
+	if (!rq) {
+		if (gpio_free(pinNum) < 0) {
+			cerr << "Error: Could not free GPIO pin " << pinNum <<
+				endl;
+			return -1;
+		}
+		return 0;
+	}
+	return 1;
+}
+
+
 
 //class declarations
 class UserInfo {
@@ -59,9 +106,11 @@ class Alarm{
 };
 class AlarmList{
 	public:
-		const int buzzerPin = 11;
-		const int motionPin = 1;
-		const int exitPin = 0;
+
+		const int EXIT_PIN = 0;
+		const int TRIGGER_PIN = 1;
+		const int BUZZER_PIN = 11;	
+
 		
 		const string filename = "alarms.txt";
 		AlarmList();
@@ -85,7 +134,7 @@ class AlarmList{
 };
 
 
-//UserInfo member function declarations
+//UserInfo member function definitions
 UserInfo::UserInfo(){ //constructor
 
 	name = "";
@@ -261,7 +310,7 @@ int UserInfo::checkEmail(const string input){//static error check valid email
 	//valid email
 	return 0;
 }
-string UserInfo::capitalize(string name){//BUG THAT IT DECAPITALIZES IF ALREADY CAPITALIZEDcapitalize name for format
+string UserInfo::capitalize(string name){//capitalize name for format
 	//declare new name to be capitalized
 	string newName = name;
 	
@@ -282,7 +331,7 @@ string UserInfo::getName(){ //getter name
 string UserInfo::getEmail(){//getter email
 	return email;
 }
-
+//Alarm member function definitions
 Alarm::Alarm(){
 	alarmTime = -1;
 	schedule = "";
@@ -354,7 +403,7 @@ string Alarm::displayAlarm() {
 	
 	return formatSched;
 }
-
+//AlarmList member function declarations
 AlarmList::AlarmList(){
 	alarms = NULL;
 	int length = -1;
@@ -466,13 +515,21 @@ int AlarmList::runAlarm(){
 	time_t now = time(0);
 	tm* ltm = localtime(&now);
 	
+	int exitRet = gpioSetup(EXIT_PIN, rqExit, 0);
+	int trigRet = gpioSetup(TRIGGER_PIN, rqTrigger, 0);
+	int buzzerRet = gpioSetup(BUZZER_PIN, rqBuzzer, 1);
+
+
+	
+	
 	int buzzerSum;
 	
-	//print date (IDK WHY 1900)
+	/*
 	cout << "\tYear: " << 1900 + ltm->tm_year<<endl;
 	cout << "\tMonth: "<< 1 + ltm->tm_mon<< endl;
 	cout << "\tDay: "<<  ltm->tm_mday << endl;
 	cout << "\tDays since Sunday: " << ltm->tm_wday << endl;
+	*/
 	
 	while(!exitButtonHit){
 		buzzerSum = 0;
@@ -482,8 +539,8 @@ int AlarmList::runAlarm(){
 		sleep(sleepTime);
 		cout << "\tCurrent time: " << (ltm->tm_hour) << ":" << (ltm->tm_min) << ":" << (ltm->tm_sec) << endl;
 		
-		//if(readExitButton)
-			//exitButtonHit = true;
+		if(gpio_get_value(EXIT_PIN))
+			exitButtonHit = true;
 		
 	//	for (int i = 0; i < length; i++){
 		//	buzzerSum += alarms[i].tick(ltm, 0) //read motionstate
@@ -499,7 +556,9 @@ int AlarmList::runAlarm(){
 		
 		
 	}
-	
+	gpioRelease(EXIT_PIN, rqExit);
+	gpioRelease(TRIGGER_PIN, rqTrigger);
+	gpioRelease(BUZZER_PIN, rqBuzzer);
 	
 	return 0;
 	
