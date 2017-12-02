@@ -9,7 +9,6 @@ const string statFileName = "stats.txt";
 
 //global function declarations
 int log(const string message, const string severity);
-int stringToInt(string str);
 int checkRange(const string setting, const char lower, const char higher);
 
 //class declarations
@@ -418,7 +417,7 @@ int AlarmList::readList(){ //creates list of alarms from text file. only to be r
 				aTimeStr += line[charIndex];
 				charIndex++;
 			}
-			int aTime = stringToInt(aTimeStr);
+			int aTime = stoi(aTimeStr);
 			charIndex++;
 			
 			while (line[charIndex]) {
@@ -547,7 +546,7 @@ int AlarmList::addAlarm(){ //gets input for appending alarm and does it on the f
 	const int option = setting[0] - '0';
 	
 	
-	//cout << name<<" "<<(stringToInt(alarm.substr(0,2)) * 60 + stringToInt(alarm.substr(3,2)))<<" "<< AlarmList::setAlarmSetting(option, alarm) << endl;
+	//cout << name<<" "<<(stoi(alarm.substr(0,2)) * 60 + stoi(alarm.substr(3,2)))<<" "<< AlarmList::setAlarmSetting(option, alarm) << endl;
 	
 	Alarm* newAlarms = new Alarm[length + 1];	
 	
@@ -557,7 +556,7 @@ int AlarmList::addAlarm(){ //gets input for appending alarm and does it on the f
 		newAlarms[i].setAlarmSchedule(alarms[i].getAlarmSchedule());
 	}
 	newAlarms[length].setAlarmName(name);
-	newAlarms[length].setAlarmTime(stringToInt(alarm.substr(0,2)) * 60 + stringToInt(alarm.substr(3,2)));
+	newAlarms[length].setAlarmTime(stoi(alarm.substr(0,2)) * 60 + stoi(alarm.substr(3,2)));
 	newAlarms[length].setAlarmSchedule(AlarmList::setAlarmSetting(option, alarm));
 	length++;
 
@@ -581,7 +580,7 @@ int AlarmList::delAlarm(){ //remove an alarm from the list of alarms
 			cerr << "\tPlease enter a single digit in range [1," << length << "]: " << endl;
 			getline(cin, posStr);
 		}
-		int pos = stringToInt(posStr)-1;
+		int pos = stoi(posStr)-1;
 		int count = 0;
 		cout << "HI" << endl;
 		Alarm* newAlarms = new Alarm[length - 1];
@@ -844,11 +843,11 @@ int AlarmList::checkDate(const string date, const string alarm){
 	tm* ltm = localtime(&now);
 	
 	//declare day, month, year, hour, minute ints
-	const int day = stringToInt(date.substr(0,2));
-	const int month = stringToInt(date.substr(3,2));
-	const int year = stringToInt(date.substr(6,4));
-	const int hour = stringToInt(alarm.substr(0,2));
-	const int minute = stringToInt(alarm.substr(3,2));
+	const int day = stoi(date.substr(0,2));
+	const int month = stoi(date.substr(3,2));
+	const int year = stoi(date.substr(6,4));
+	const int hour = stoi(alarm.substr(0,2));
+	const int minute = stoi(alarm.substr(3,2));
 	
 	//cannot choose a date from the past
 	if (year < (ltm->tm_year + 1900)) {
@@ -992,7 +991,7 @@ int log(const string severity, const string message) {
 	
 	return 0;
 }
-int stringToInt(const string str){
+int stoi(const string str){
 	int num = 0;
 	int count = 0;
 	
