@@ -9,28 +9,55 @@ using namespace std;
 int writeAlarm(const string name, const string alarm);
 int checkName(const string name);
 int checkAlarm(const string alarm);
-int checkRange(const string setting, char lower, char higher);
+int checkAlarmSetting(const string setting);
 int checkDate(const string date, const string alarmTime);
 string setAlarmSetting(const int option, const string alarm);
 int stringToInt(string str);
+bool isLeapYear(const int year);
 
 
 int writeAlarm(const string name, const string alarm, const string setting, const string settingData) {
 	//declare filename to be written to
+	const string filename = "alarmdata.txt";
 	
 	ofstream outfile; // declare the file object
-	outfile.open(alarmFileName); // open the file
+	outfile.open(filename, ios::app | ios::out); // open the file
 	if (!outfile.is_open()) {
 		cerr << "Unable to open file" << endl;
 		return -1; // Unable to open file
 	}
 	
-	outfile << name << "," << alarm << "," << setting << "," << settingData << "\n";
+	outfile << name << "," << alarm << "," << setting << "," << settingData << "\r\n";
 	
 	outfile.close();
 	return 0;
 }
 
+int checkName(const string name) {
+	//check for empty string
+	if (name.empty()) {
+		cerr << "Error: Empty string!" << endl;
+		return -2;
+	}
+	
+	//test print name COMMENT OUT OF FINAL COPY
+	cout << "Recieved name: ";
+	for (int i = 0; i < name.length(); i++) {
+		cout << name[i] << " ";
+	}
+	cout << endl;
+	
+	//check for  (weird bug involving cin operator)
+	for (int i = 0; i < name.length(); i++) {
+		if (name[i] == '') {
+			cerr << "Don't use arrow keys!" << endl;
+			return -2;
+		}
+	}
+	
+	//valid name
+	return 0;
+}
 
 int checkAlarm(const string alarm) {
 	//check alarm for empty string
@@ -107,7 +134,7 @@ int checkAlarm(const string alarm) {
 	return 0;
 }
 
-int checkRange(const string setting, char lower, char higher) {
+int checkAlarmSetting(const string setting) {
 	//check setting for empty string
 	if (setting.empty()) {
 		cerr << "Error: Empty string!" << endl;
@@ -127,11 +154,12 @@ int checkRange(const string setting, char lower, char higher) {
 		cerr << "Error: Invalid option" << endl;
 		return -4;
 	}
-	else if (setting[0] < lower || setting[0] > higher) {
+	else if (setting[0] < '1' || setting[0] > '5') {
 		cerr << "Error: Invalid option" << endl;
 		return -4;
 	}
 	
+	//1 2 3 4 5
 	return 0;
 }
 
@@ -199,20 +227,6 @@ int checkDate(const string date, const string alarmTime) {
 		return -5;
 	}
 	
-	//check for valid month and year
-	if ((date[0] == '0' && date[1] == '0') || (date[0] == '3' && date[1] > '1') || date[0] > '3') {
-		cerr << "Error: Invalid month" << endl;
-		return -5;
-	}
-	if ((date[3] == '0' && date[4] == '0') || (date[3] == '1' && date[4] > '2')) {
-		cerr << "Error: Invalid month" << endl;
-		return -5;
-	}
-	if (date[6] == '0' && date[7] == '0' && date[8] == '0' && date[9] == '0') {
-		cerr << "Error: Invalid year" << endl;
-		return -5;
-	}
-	
 	//initialize time and set to local to compare dates
 	time_t now = time(0);
 	tm* ltm = localtime(&now);
@@ -244,6 +258,34 @@ int checkDate(const string date, const string alarmTime) {
 	if (minute < ltm->tm_min && hour == ltm->tm_hour) {
 		cerr << "Choose a time in the future! (time)" << endl;
 		return -5;
+	}
+	
+	//check for valid time and year
+	const int numMonths = 12;
+	const int daysInMonths[numMonths] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+	
+	//check for zeroes
+	if (day == 0 || month == 0 || year == 0) {
+		
+		cerr << "Error: Invalid date" << endl;
+		return -5;
+	}
+	//check leap year as an outlier
+	else if (isLeapYear(year) && month == 2 && day > 29) {
+		cerr << "Error: Invalid date" << endl;
+		return -5;
+	}
+	else if (!isLeapYear(year) && month == 2 && day > 28) {
+		cerr << "Error: Invalid date" << endl;
+		return -5;
+	}
+	
+	//check each day for validitiy with respect to month
+	for (int i = 0; i < numMonths; i++) {
+		if (month == (i + 1) && day > daysInMonths[i]) {
+			cerr << "Invalid date" << endl;
+			return -5;
+		}
 	}
 	
 	//freak off???
@@ -341,6 +383,16 @@ int stringToInt(const string str) {
 	return num;
 }
 
+bool isLeapYear(const int year) {
+	if (year % 400 == 0)
+		return true;
+	else if (year % 100 == 0)
+		return false;
+	else if (year % 4 == 0)
+		return true;
+	return false;
+}
+
 int main() {
 	//declare variables
 	string name;
@@ -367,7 +419,7 @@ int main() {
 	cout << "Alarm setting:" << endl << "1) Everyday" << endl << "2) Weekdays" << endl << "3) Weekends" 
 		<< endl << "4) Date" << endl << "5) Custom" << endl << "Enter your setting: ";
 	getline(cin, setting);
-	while (checkRange(setting)) {
+	while (checkAlarmSetting(setting)) {
 		cerr << "Please enter a valid setting (1, 2, 3, 4, or 5): ";
 		getline(cin, setting);
 	}
@@ -379,32 +431,5 @@ int main() {
 	cout << (writeAlarm(name, alarm, setting, setAlarmSetting(option, alarm))) << endl;
 	
 	//NICE
-	return 0;
-}
-
-
-int checkName(const string name) {
-	//check for empty string
-	if (name.empty()) {
-		cerr << "Error: Empty string!" << endl;
-		return -2;
-	}
-	
-	//test print name COMMENT OUT OF FINAL COPY
-	cout << "Recieved name: ";
-	for (int i = 0; i < name.length(); i++) {
-		cout << name[i] << " ";
-	}
-	cout << endl;
-	
-	//check for  (weird bug involving cin operator)
-	for (int i = 0; i < name.length(); i++) {
-		if (name[i] == '') {
-			cerr << "Don't use arrow keys!" << endl;
-			return -2;
-		}
-	}
-	
-	//valid name
 	return 0;
 }
