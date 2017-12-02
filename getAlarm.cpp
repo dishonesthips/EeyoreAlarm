@@ -7,7 +7,6 @@
 using namespace std;
 
 int writeAlarm(const string name, const string alarm);
-int checkName(const string name);
 int checkAlarm(const string alarm);
 int checkRange(const string setting, char lower, char higher);
 int checkDate(const string date, const string alarmTime);
@@ -135,7 +134,7 @@ int checkRange(const string setting, char lower, char higher) {
 	return 0;
 }
 
-int checkDate(const string date, const string alarmTime) {
+int checkDate(const string date, const string alarmTime) {//DD/MM/YYYY
 	//check for empty string
 	if (date.empty()) {
 		cerr << "Error: Empty string!" << endl;
@@ -204,7 +203,7 @@ int checkDate(const string date, const string alarmTime) {
 		cerr << "Error: Invalid month" << endl;
 		return -5;
 	}
-	if ((date[3] == '0' && date[4] == '0') || (date[3] == '1' && date[4] > '2')) {
+	if ((date[3] == '0' && date[4] == '0') || (date[3] == '1' && date[4] > '2') || date[3] > '1') {
 		cerr << "Error: Invalid month" << endl;
 		return -5;
 	}
@@ -226,15 +225,15 @@ int checkDate(const string date, const string alarmTime) {
 	
 	//cannot choose a date from the past
 	if (year < (ltm->tm_year + 1900)) {
-		cerr << "Choose a time in the future! (year)" << endl;
+		cerr << "Choose a year in the future!" << endl;
 		return -5;
 	}
 	if (month < (ltm->tm_mon + 1) && year == ltm->tm_year) {
-		cerr << "Choose a time in the future! (month)" << endl;
+		cerr << "Choose a month in the future!" << endl;
 		return -5;
 	}
 	if (day < ltm->tm_mday && month == ltm->tm_mon) {
-		cerr << "Choose a time in the future! (day)" << endl;
+		cerr << "Choose a day in the future!" << endl;
 		return -5;
 	}
 	if (hour < ltm->tm_hour && day == ltm->tm_mday) {
@@ -382,29 +381,3 @@ int main() {
 	return 0;
 }
 
-
-int checkName(const string name) {
-	//check for empty string
-	if (name.empty()) {
-		cerr << "Error: Empty string!" << endl;
-		return -2;
-	}
-	
-	//test print name COMMENT OUT OF FINAL COPY
-	cout << "Recieved name: ";
-	for (int i = 0; i < name.length(); i++) {
-		cout << name[i] << " ";
-	}
-	cout << endl;
-	
-	//check for  (weird bug involving cin operator)
-	for (int i = 0; i < name.length(); i++) {
-		if (name[i] == '') {
-			cerr << "Don't use arrow keys!" << endl;
-			return -2;
-		}
-	}
-	
-	//valid name
-	return 0;
-}

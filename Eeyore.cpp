@@ -1,12 +1,16 @@
 #include <iostream>
 #include <string>
 #include <fstream>
+#include <math.h>
 using namespace std;
 
 const string statFileName = "stats.txt";
 const string alarmFileName = "alarms.txt";
 enum SEVERITY {TRACE, DEBUG, INFO, WARNING, FATAL};
 
+
+int log(const string message, const string severity);
+int stringToInt(string str);
 //class declarations
 class UserInfo {
 	public:
@@ -30,6 +34,45 @@ class UserInfo {
 		static int checkName(const string input);
 		static int checkEmail(const string input);
 };
+class Alarm{
+	public:
+		int tick(tm* timeStruct); //return 1 or 0 if buzzer should be on/off for this alarm
+		Alarm();
+		string printAlarm();
+		void setName(const string name);
+		void setAlarmTime(const int aTime);
+		void setSchedule(const string sched);
+		//void displayAlarm();
+		
+		string getAlarmName();
+		int getAlarmTime();
+		string getAlarmSchedule();
+	private:
+		tm* timeFreeze;//holds all information at the time of alarm start
+		bool ongoing;
+
+		bool oneTime;
+		string alarmName;
+		int alarmTime; //minutes since midnight alarm will start
+		string schedule; //represents either days to go off or a single date
+};
+class AlarmList{
+	public:
+		const string filename = "alarms.txt";
+		AlarmList();
+		//int addAlarm();
+		//int delAlarm(int pos);
+		int readList();
+		int writeList();
+		int displayList();
+		
+	private:
+
+		Alarm* alarms;
+		int length;
+};
+
+
 //UserInfo member function declarations
 UserInfo::UserInfo() { //constructor
 
@@ -236,11 +279,150 @@ string UserInfo::getName() {
 string UserInfo::getEmail() {
 	return email;
 }
+Alarm::Alarm(){
+	alarmTime = -1;
+	schedule = "";
+	oneTime = false;
+	ongoing = false;
+	timeFreeze=NULL;
+	
+}
+int Alarm::tick(tm* timeStruct){
+
+	int currMin = (timeStruct->tm_hour);
+	
+	
+}
+string Alarm::printAlarm(){
+	
+	string s;
+	string timeString = to_string(alarmTime);
+	s = alarmName+","+timeString+","+schedule;//+"\r";
+	return s;
+}
+void Alarm::setName(const string name){
+	alarmName = name;
+}
+void Alarm::setAlarmTime(const int aTime){
+	alarmTime = aTime;
+}
+void Alarm::setSchedule(const string sched){
+	schedule = sched;
+}
+string Alarm::getAlarmName() {
+	return alarmName;
+}
+int Alarm::getAlarmTime() {
+	return alarmTime;
+}
+string Alarm::getAlarmSchedule() {
+	return schedule;
+}
+AlarmList::AlarmList(){
+	alarms = NULL;
+	int length = -1;
+}
+int AlarmList::readList(){
+	
+	string line;
+	length = 0;
+	
+	//opening file to get number of lines
+	ifstream infile;            // declare the file object
+	infile.open(filename);      // open the file
+	
+	if (!infile.is_open()){
+		cerr<<"cant find alarm file oh no"<<endl;
+		return -1;
+	}
+	
+	while(!infile.eof()){
+		getline(infile,line);
+		if(!line.empty() && line.compare("\r")!=0)
+			length++;
+	}
+	infile.close();
+	
+	
+
+	Alarm* tmp = alarms;
+	alarms = new Alarm[length];
+	delete tmp;
+	
+
+	ifstream infileR;            // declare the file object
+	infileR.open(filename);      // open the file
+
+	if (!infileR.is_open()){
+		cerr<<"cant find alarm file oh no"<<endl;
+		return -1;
+	}
+	
+
+	
+	int index = 0;
+	int charIndex;
+	while(!infileR.eof()){
+		getline(infileR,line);
+		if(!line.empty() && line.compare("\r")!=0){
+			string aName = "";
+			string aTimeStr="";
+			string aSched="";
+			//cout<<index<<endl;
+			//AlarmList::assignData(line,alarms[index++]);
+			charIndex = 0;
+			while (line[charIndex] != ',') {
+				aName+= line[charIndex];
+				charIndex++;
+			}
+			charIndex++;
+			
+			while (line[charIndex] != ',') {
+				aTimeStr += line[charIndex];
+				charIndex++;
+			}
+			int aTime = stringToInt(aTimeStr);
+			charIndex++;
+			
+			while (line[charIndex]) {
+				aSched += line[charIndex];
+				charIndex++;
+			}
+			charIndex++;
+			//cout<<aName<<" "<<aTime<<" "<<aSched<<endl;
+			alarms[index].setName(aName);
+			alarms[index].setAlarmTime(aTime);
+			alarms[index].setSchedule(aSched);
+			
+			index++;
+		}
+		
+
+	}
+	infileR.close();
+	return 0;
+
+}
+int AlarmList::writeList(){
+	if (length > 0) {
+		ofstream alarmFirst;
+		alarmFirst.open(filename);
+		alarmFirst << alarms[0].getAlarmName() << "," << alarms[0].getAlarmTime() << " " << alarms[0].getAlarmSchedule() << "\r\n";
+		alarmFirst.close();
+		
+		if (length > 1) {
+		ofstream alarmFile;
+		alarmFile.open(filename, ios::app | ios::out);
+		alarmFile << alarms[0].getAlarmName() << "," << alarms[0].getAlarmTime() << " " << alarms[0].getAlarmSchedule() << "\r\n";
+		alarmFile.close();
+		}
+	}
+	
+	return 0;
+}
 
 
-//function declarations
-int log(const string message, const string severity);
-
+//global function declarations
 int log(const string severity, const string message) {
 	//initialize time and set to local
 	time_t now = time(0);
@@ -264,11 +446,22 @@ int log(const string severity, const string message) {
 	
 	return 0;
 }
-
-
+int stringToInt(const string str){
+	int num = 0;
+	int count = 0;
+	
+	for (int i = str.length() - 1; i >= 0; i--) {
+		num = num + (str[i] - '0') * pow(10, count);
+		count++;
+	}
+	
+	return num;
+}
 int main(const int argc, const char* const args[]){
 	bool exit = false;
 	UserInfo user;
+	AlarmList alarmList;
+	alarmList.readList();
 	
 	if (user.fileNotExist()) { 
 		cout<<"\n\tWelcome to Eeyore! Is this your first time?\n\tI don't recognize you...\n\n";
