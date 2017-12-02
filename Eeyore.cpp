@@ -41,11 +41,13 @@ class Alarm{
 		void setAlarmName(const string name);
 		void setAlarmTime(const int aTime);
 		void setAlarmSchedule(const string sched);
+		
 		//void displayAlarm();
 		
 		string getAlarmName();
 		int getAlarmTime();
 		string getAlarmSchedule();
+		string displayAlarm();
 	private:
 		tm* timeFreeze;//holds all information at the time of alarm start
 		bool ongoing;
@@ -60,17 +62,15 @@ class AlarmList{
 		const string filename = "alarms.txt";
 		AlarmList();
 		int addAlarm();
-		//int delAlarm(int pos);
+		int delAlarm();
 		int readList();
 		int writeList();
 		int displayList();
 		
 		Alarm* alarms;
 		int length;
-	private:
-
-
 		
+	private:
 		static bool isLeapYear(const int year);
 		static int checkName(const string name);
 		static int checkAlarm(const string alarm);
@@ -81,12 +81,12 @@ class AlarmList{
 
 
 //UserInfo member function declarations
-UserInfo::UserInfo() { //constructor
+UserInfo::UserInfo(){ //constructor
 
 	name = "";
 	email = "";
 }
-void UserInfo::writeInfo() {//write info to a file with paramters info
+void UserInfo::writeInfo(){//write info to a file with paramters info
 	//declare strings to be written to file
 	string nameFile;
 	string emailFile;
@@ -113,7 +113,7 @@ void UserInfo::writeInfo() {//write info to a file with paramters info
 	outfile << nameFile << "," << emailFile << "\r\n";
 	outfile.close();
 }
-void UserInfo::readInfo() {//read info from a file and sets values of object UserInfo accordingly
+void UserInfo::readInfo(){//read info from a file and sets values of object UserInfo accordingly
 
 	//declare variable
 	string line;
@@ -140,7 +140,7 @@ void UserInfo::readInfo() {//read info from a file and sets values of object Use
 		i++;
 	}
 }
-bool UserInfo::fileNotExist() {//check to see if text file already exists
+bool UserInfo::fileNotExist(){//check to see if text file already exists
 	ifstream infile;
 	infile.open(filename);
 	if(infile.is_open()) {
@@ -150,7 +150,7 @@ bool UserInfo::fileNotExist() {//check to see if text file already exists
 	infile.close();
 	return true; //file does not exist (yet) :smirk:
 }
-int UserInfo::checkName(const string input) {//static error check valid name
+int UserInfo::checkName(const string input){//static error check valid name
 	//check for empty string
 	if (input.empty()) {
 		cerr << "Error: Empty string!" << endl;
@@ -175,7 +175,7 @@ int UserInfo::checkName(const string input) {//static error check valid name
 	//valid name
 	return 0;
 }
-int UserInfo::checkEmail(const string input) {//static error check valid email
+int UserInfo::checkEmail(const string input){//static error check valid email
 	//check for empty string
 	if (input.empty()) {
 		cerr << "Error: Empty string!" << endl;
@@ -256,8 +256,7 @@ int UserInfo::checkEmail(const string input) {//static error check valid email
 	//valid email
 	return 0;
 }
-string UserInfo::capitalize(string name) {//capitalize name for format
-	
+string UserInfo::capitalize(string name){//BUG THAT IT DECAPITALIZES IF ALREADY CAPITALIZEDcapitalize name for format
 	//declare new name to be capitalized
 	string newName = name;
 	
@@ -266,24 +265,16 @@ string UserInfo::capitalize(string name) {//capitalize name for format
 	for (int i = 0; i < newName.length(); i++) {
 		if ((i == 0 || newName[i - 1] == ' ' || newName[i - 1] == '-' || newName[i - 1] == '\'') && newName[i] >= 'a' && newName[i] <= 'z')
 			newName[i] = newName[i] - 32;
-		else if (newName[i] >= 'A' && newName[i] <= 'Z')
+		else if (newName[i] >= 'A' && newName[i] <= 'Z' && (i != 0 && newName[i - 1] != ' ' && newName[i - 1] != '-' && newName[i - 1] != '\''))
 			newName[i] = newName[i] + 32;
 	}
-	/*
-	//test print newName COMMENT OUT OF FINAL COPY
-	cout << "Capitalized name: ";
-	for (int i = 0; i < newName.length(); i++) {
-		cout << newName[i] << " ";
-	}
-	cout << endl;
-	*/
 	//return capitalized name
 	return newName;
 }
-string UserInfo::getName() { //getter name
+string UserInfo::getName(){ //getter name
 	return name;
 }
-string UserInfo::getEmail() {//getter email
+string UserInfo::getEmail(){//getter email
 	return email;
 }
 
@@ -316,22 +307,54 @@ void Alarm::setAlarmTime(const int aTime){
 }
 void Alarm::setAlarmSchedule(const string sched){
 	schedule = sched;
+	if (sched[2] == '/')
+		oneTime = true;
 }
-string Alarm::getAlarmName() {
+string Alarm::getAlarmName(){
 	return alarmName;
 }
-int Alarm::getAlarmTime() {
+int Alarm::getAlarmTime(){
 	return alarmTime;
 }
-string Alarm::getAlarmSchedule() {
+string Alarm::getAlarmSchedule(){
 	return schedule;
+}
+string Alarm::displayAlarm() {
+	string formatSched = "\tName: " + alarmName + "\n";
+	
+	string hour = to_string(alarmTime/60);
+	if (hour.length() == 1) {
+		hour = "0" + hour;
+	}
+	string minute = to_string(alarmTime%60);
+	if (minute.length() == 1) {
+		minute = "0" + minute;
+	}
+	formatSched = formatSched + "\tTime: " + hour + ":" + minute;
+	
+	const int daysInWeek = 7;
+	string daysWeekStr[daysInWeek] = {"SU", "MO", "TU", "WE", "TH", "FR", "SA"};
+	
+	if (oneTime)
+		formatSched = formatSched + "\tDate: " + schedule;
+	else {
+		formatSched = formatSched + "\tSchedule: ";
+		for (int i = 0; i < daysInWeek; i++) {
+			if (schedule[i] == '1') {
+				formatSched = formatSched + daysWeekStr[i] + " ";
+			}
+		}
+		formatSched += "\n";
+	}
+	
+	return formatSched;
 }
 
 AlarmList::AlarmList(){
 	alarms = NULL;
 	int length = -1;
 }
-int AlarmList::readList(){
+int AlarmList::readList(){ //creates list of alarms from text file. only to be run once at start of program
 	
 	string line;
 	length = 0;
@@ -367,7 +390,6 @@ int AlarmList::readList(){
 		return -1;
 	}
 	
-
 	
 	int index = 0;
 	int charIndex;
@@ -412,10 +434,9 @@ int AlarmList::readList(){
 	return 0;
 
 }
-int AlarmList::writeList(){
+int AlarmList::writeList(){ //appends an alarm to the file of alarms
 	
-	for (int i = 0; i < length; i++)
-		cout<<alarms[i].printAlarm()<<endl;
+	
 	if (length > 0) {
 		ofstream alarmFirst;
 		alarmFirst.open(filename);
@@ -427,14 +448,14 @@ int AlarmList::writeList(){
 			alarmFile.open(filename, ios::app | ios::out);
 
 			for (int i = 1; i < length; i++)
-				alarmFile << alarms[i].getAlarmName() << "," << alarms[i].getAlarmTime() << "," << alarms[i].getAlarmSchedule() << "\r\n";
+				alarmFile << alarms[i].printAlarm()<< "\r\n";
 			alarmFile.close();
 		}
 	}
 	
 	return 0;
 }
-int AlarmList::addAlarm(){
+int AlarmList::addAlarm(){ //gets input for appending alarm and does it on the fly
 	
 	string name;
 	string alarm;
@@ -474,30 +495,23 @@ int AlarmList::addAlarm(){
 	const int option = setting[0] - '0';
 	
 	
-	cout << name<<" "<<(stringToInt(alarm.substr(0,2)) * 60 + stringToInt(alarm.substr(3,2)))<<" "<< AlarmList::setAlarmSetting(option, alarm) << endl;
+	//cout << name<<" "<<(stringToInt(alarm.substr(0,2)) * 60 + stringToInt(alarm.substr(3,2)))<<" "<< AlarmList::setAlarmSetting(option, alarm) << endl;
 	
-	Alarm* tmp = alarms;
-	alarms = new Alarm[length + 1];
-	cout << "YUFSYFU" << endl;
-	
+	Alarm* newAlarms = new Alarm[length + 1];	
 	
 	for (int i = 0; i < length; i++){
-		cout<<alarms[i].printAlarm()<<endl;
-		alarms[i].setAlarmName(tmp[i].getAlarmName());
-		alarms[i].setAlarmTime(tmp[i].getAlarmTime());
-		alarms[i].setAlarmSchedule(tmp[i].getAlarmSchedule());
-		cout<<alarms[i].printAlarm()<<endl;
-
+		newAlarms[i].setAlarmName(alarms[i].getAlarmName());
+		newAlarms[i].setAlarmTime(alarms[i].getAlarmTime());
+		newAlarms[i].setAlarmSchedule(alarms[i].getAlarmSchedule());
 	}
-	alarms[length].setAlarmName(name);
-	alarms[length].setAlarmTime(stringToInt(alarm.substr(0,2)) * 60 + stringToInt(alarm.substr(3,2)));
-	alarms[length].setAlarmSchedule(AlarmList::setAlarmSetting(option, alarm));
+	newAlarms[length].setAlarmName(name);
+	newAlarms[length].setAlarmTime(stringToInt(alarm.substr(0,2)) * 60 + stringToInt(alarm.substr(3,2)));
+	newAlarms[length].setAlarmSchedule(AlarmList::setAlarmSetting(option, alarm));
 	length++;
-	
-	//delete tmp;
+
+	alarms = newAlarms;
 	
 	//cout << alarms[length].getAlarmName()<<" "<<alarms[length].getAlarmTime()<<" "<< alarms[length].getAlarmSchedule() << endl;
-	cout<<"CHECK TMP HERE"<<endl;
 	
 	
 	writeList();
@@ -505,7 +519,42 @@ int AlarmList::addAlarm(){
 	
 	return 0;
 }
-bool AlarmList::isLeapYear(const int year){
+int AlarmList::delAlarm(){ //remove an alarm from the list of alarms
+	string posStr;
+	char maxLengthChar = length + '0';
+	cout << "\tSelect which alarm to delete (number): ";
+	getline(cin, posStr);
+	while (checkRange(posStr, '1', maxLengthChar)) {
+		cerr << "\tPlease enter a single digit in range [1," << length << "]: " << endl;
+		getline(cin, posStr);
+	}
+	int pos = stringToInt(posStr)-1;
+	int count = 0;
+	cout << "HI" << endl;
+	Alarm* newAlarms = new Alarm[length - 1];
+	for (int i = 0; i < pos; i++) {
+		newAlarms[i].setAlarmName(alarms[i].getAlarmName());
+		newAlarms[i].setAlarmTime(alarms[i].getAlarmTime());
+		newAlarms[i].setAlarmSchedule(alarms[i].getAlarmSchedule());
+	}
+	for (int i = pos+1; i < length; i++) {
+		newAlarms[i-1].setAlarmName(alarms[i].getAlarmName());
+		newAlarms[i-1].setAlarmTime(alarms[i].getAlarmTime());
+		newAlarms[i-1].setAlarmSchedule(alarms[i].getAlarmSchedule());
+	}
+	length--;
+	
+	alarms = newAlarms;
+	writeList();
+	
+}
+int AlarmList::displayList() { // display list of alarms, user-friendly
+	cout<<"\n\tThe following are your alarms:\n";
+	for (int i = 0; i < length; i++) {
+		cout << "\tALARM " << i+1 << "\n" << alarms[i].displayAlarm() << endl;
+	}
+}
+bool AlarmList::isLeapYear(const int year){ //returns true if given year is leap year
 	if (year % 400 == 0)
 		return true;
 	else if (year % 100 == 0)
@@ -515,7 +564,7 @@ bool AlarmList::isLeapYear(const int year){
 	return false;
 
 }
-string AlarmList::setAlarmSetting(const int option, const string alarm) {
+string AlarmList::setAlarmSetting(const int option, const string alarm){
 	//initialize strings
 	string daysOfWeek;
 	string input;
@@ -562,7 +611,7 @@ string AlarmList::setAlarmSetting(const int option, const string alarm) {
 	//if 1, 2, 3, or 5
 	return daysOfWeek;
 }
-int AlarmList::checkName(const string input) {
+int AlarmList::checkName(const string input){//error checks for empty string and issues with cin
 	//check for empty string
 	if (input.empty()) {
 		cerr << "Error: Empty string!" << endl;
@@ -587,7 +636,7 @@ int AlarmList::checkName(const string input) {
 	//valid name
 	return 0;
 }
-int AlarmList::checkAlarm(const string alarm) {
+int AlarmList::checkAlarm(const string alarm){
 	//check alarm for empty string
 	if (alarm.empty()) {
 		cerr << "Error: Empty string!" << endl;
@@ -656,7 +705,7 @@ int AlarmList::checkAlarm(const string alarm) {
 	//whoa
 	return 0;
 }
-int AlarmList::checkDate(const string date, const string alarm) {
+int AlarmList::checkDate(const string date, const string alarm){
 	//check for empty string
 	if (date.empty()) {
 		cerr << "Error: Empty string!" << endl;
@@ -763,6 +812,13 @@ int AlarmList::checkDate(const string date, const string alarm) {
 		cerr << "Error: Invalid date" << endl;
 		return -5;
 	}
+	
+	//check for bad month
+	if (month > 12) {
+		cerr << "Error: Invalid date" << endl;
+		return -5;
+	}
+	
 	//check leap year as an outlier
 	else if (AlarmList::isLeapYear(year) && month == 2 && day > 29) {
 		cerr << "Error: Invalid date" << endl;
@@ -784,7 +840,7 @@ int AlarmList::checkDate(const string date, const string alarm) {
 	//freak off???
 	return 0;
 }
-int AlarmList::checkYesOrNo(const string yn) {
+int AlarmList::checkYesOrNo(const string yn) {//error checks yes or no input
 	//check for empty string
 	if (yn.empty()) {
 		cerr << "Error: Empty string!" << endl;
@@ -886,32 +942,31 @@ int main(const int argc, const char* const args[]){
 	if (user.fileNotExist()) { 
 		cout<<"\n\tWelcome to Eeyore! Is this your first time?\n\tI don't recognize you...\n\n";
 		user.writeInfo();
-		user.readInfo();
-		cout << user.getName() << " " << user.getEmail() << endl;
 	}
-	
+	user.readInfo();
+	//cout << user.getName() << " " << user.getEmail() << endl;
+
 	while (!exit){
-		cout<<"numalarms " <<alarmList.length<<endl;
-		for(int i = 0; i < alarmList.length;i++)
-			cout<<alarmList.alarms[i].printAlarm()<<endl;
 		
-		cout<<"\n\tWelcome to Eeyore, "<<user.getName()<<"\n\n\t"
+		
+		cout<<"\tWelcome to Eeyore, "<<user.getName()<<"\n\n\t"
 			<<"1. Run Alarm System\n\t"
 			<<"2. Add an Alarm\n\t"
 			<<"3. Delete an Alarm\n\t"
-			<<"4. Update User Info\n\t"
-			<<"5. View Statistics\n\t"
-			<<"6. Exit\n\n\t"
+			<<"4. View Alarms\n\t"
+			<<"5. Update User Info\n\t"
+			<<"6. View Statistics\n\t"
+			<<"7. Exit\n\n\t"
 			<<"Please enter the number corresponding to one of the options: ";
 
 		string menuAnswer;
 		getline(cin, menuAnswer);
-		/*
-		while (checkMenuAnswer(menuAnswer)) {
-			cout << "Please enter a single digit in range [1,6]: ";
+		
+		while (checkRange(menuAnswer,'1','7')) {
+			cout << "\tPlease enter a single digit in range [1,7]: ";
 			getline(cin, menuAnswer);
 		}
-		*/
+		
 		
 	
 
@@ -921,18 +976,23 @@ int main(const int argc, const char* const args[]){
 		else if(menuAnswer[0] == '2'){//Add an Alarm
 			alarmList.addAlarm();
 		}
-		else if(menuAnswer[0] == '3'){//Delete and Alarm
-			
-		}		
-		else if(menuAnswer[0] == '4'){//Update User Info
+		else if(menuAnswer[0] == '3'){//Delete an Alarm
+			alarmList.displayList();
+			alarmList.delAlarm();
+		}
+		else if (menuAnswer[0] == '4') {//View Alarms
+			alarmList.displayList();
+			cout<<"\tHit enter to continue... ";
+			getline(cin,menuAnswer);
+		}
+		else if(menuAnswer[0] == '5'){//Update User Info
 			user.writeInfo();
 			user.readInfo();
-			cout << user.getName() << " " << user.getEmail() << endl;
 		}
-		else if(menuAnswer[0] == '5'){//View Statistics
+		else if(menuAnswer[0] == '6'){//View Statistics
 			
 		}
-		else if(menuAnswer[0] == '6'){//Exit
+		else if(menuAnswer[0] == '7'){//Exit
 			log("TRACE","Manual request to exit program");
 			exit = true;
 		}
@@ -941,7 +1001,7 @@ int main(const int argc, const char* const args[]){
 			exit = true;
 		}
 
-
+		cout<<"\n\n\n\t_____________________________\n\n\n";
 	}
 	cout<<"\n\tThanks for using Eeyore! Sweet Dreams!"<<endl;
 	return 0;
