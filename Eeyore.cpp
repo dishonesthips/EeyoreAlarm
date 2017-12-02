@@ -2,6 +2,7 @@
 #include <string>
 #include <fstream>
 #include <math.h>
+#include <unistd.h>
 using namespace std;
 
 const string statFileName = "stats.txt";
@@ -10,6 +11,7 @@ const string statFileName = "stats.txt";
 int log(const string message, const string severity);
 int stringToInt(string str);
 int checkRange(const string setting, const char lower, const char higher);
+
 //class declarations
 class UserInfo {
 	public:
@@ -35,42 +37,46 @@ class UserInfo {
 };
 class Alarm{
 	public:
-		int tick(tm* timeStruct); //return 1 or 0 if buzzer should be on/off for this alarm
+		int tick(tm* timeStruct, int motionState); //return 1 or 0 if buzzer should be on/off for this alarm
 		Alarm();
-		string printAlarm();
 		void setAlarmName(const string name);
 		void setAlarmTime(const int aTime);
 		void setAlarmSchedule(const string sched);
-		
-		//void displayAlarm();
-		
+				
 		string getAlarmName();
 		int getAlarmTime();
 		string getAlarmSchedule();
+		string printAlarm();
+		
 		string displayAlarm();
 	private:
 		tm* timeFreeze;//holds all information at the time of alarm start
-		bool ongoing;
+		bool ongoing; //on if the buzzer should be on
 
-		bool oneTime;
-		string alarmName;
+		bool oneTime; //if it is a onetime alarm or a recurring alarm
+		string alarmName; 
 		int alarmTime; //minutes since midnight alarm will start
 		string schedule; //represents either days to go off or a single date
 };
 class AlarmList{
 	public:
+		const int buzzerPin = 11;
+		const int motionPin = 1;
+		const int exitPin = 0;
+		
 		const string filename = "alarms.txt";
 		AlarmList();
+		int runAlarm();
 		int addAlarm();
 		int delAlarm();
 		int readList();
 		int writeList();
 		int displayList();
 		
+	private:
 		Alarm* alarms;
 		int length;
 		
-	private:
 		static bool isLeapYear(const int year);
 		static int checkName(const string name);
 		static int checkAlarm(const string alarm);
@@ -286,7 +292,7 @@ Alarm::Alarm(){
 	timeFreeze=NULL;
 	
 }
-int Alarm::tick(tm* timeStruct){
+int Alarm::tick(tm* timeStruct, int motionState){
 
 	int currMin = (timeStruct->tm_hour);
 	
@@ -455,6 +461,52 @@ int AlarmList::writeList(){ //appends an alarm to the file of alarms
 	
 	return 0;
 }
+int AlarmList::runAlarm(){
+	bool exitButtonHit= false;
+	const int sleepTime = 1;
+	time_t now = time(0);
+	tm* ltm = localtime(&now);
+	
+	int buzzerSum;
+	
+	//print date (IDK WHY 1900)
+	cout << "\tYear: " << 1900 + ltm->tm_year<<endl;
+	cout << "\tMonth: "<< 1 + ltm->tm_mon<< endl;
+	cout << "\tDay: "<<  ltm->tm_mday << endl;
+	cout << "\tDays since Sunday: " << ltm->tm_wday << endl;
+	
+	while(!exitButtonHit){
+		buzzerSum = 0;
+		now = time(0);
+		tm* ltm = localtime(&now);
+		
+		sleep(sleepTime);
+		cout << "\tCurrent time: " << (ltm->tm_hour) << ":" << (ltm->tm_min) << ":" << (ltm->tm_sec) << endl;
+		
+		//if(readExitButton)
+			//exitButtonHit = true;
+		
+	//	for (int i = 0; i < length; i++){
+		//	buzzerSum += alarms[i].tick(ltm, 0) //read motionstate
+		//}
+		
+		//if (buzzerSum){
+			//output buzzer 1
+	//	}
+		//else
+			//output buzzer 0
+		
+		
+		
+		
+	}
+	
+	
+	return 0;
+	
+	
+	
+}
 int AlarmList::addAlarm(){ //gets input for appending alarm and does it on the fly
 	
 	string name;
@@ -520,39 +572,51 @@ int AlarmList::addAlarm(){ //gets input for appending alarm and does it on the f
 	return 0;
 }
 int AlarmList::delAlarm(){ //remove an alarm from the list of alarms
-	string posStr;
-	char maxLengthChar = length + '0';
-	cout << "\tSelect which alarm to delete (number): ";
-	getline(cin, posStr);
-	while (checkRange(posStr, '1', maxLengthChar)) {
-		cerr << "\tPlease enter a single digit in range [1," << length << "]: " << endl;
+	if (length){
+		string posStr;
+		char maxLengthChar = length + '0';
+		cout << "\tSelect which alarm to delete (number): ";
 		getline(cin, posStr);
+		while (checkRange(posStr, '1', maxLengthChar)) {
+			cerr << "\tPlease enter a single digit in range [1," << length << "]: " << endl;
+			getline(cin, posStr);
+		}
+		int pos = stringToInt(posStr)-1;
+		int count = 0;
+		cout << "HI" << endl;
+		Alarm* newAlarms = new Alarm[length - 1];
+		for (int i = 0; i < pos; i++) {
+			newAlarms[i].setAlarmName(alarms[i].getAlarmName());
+			newAlarms[i].setAlarmTime(alarms[i].getAlarmTime());
+			newAlarms[i].setAlarmSchedule(alarms[i].getAlarmSchedule());
+		}
+		for (int i = pos+1; i < length; i++) {
+			newAlarms[i-1].setAlarmName(alarms[i].getAlarmName());
+			newAlarms[i-1].setAlarmTime(alarms[i].getAlarmTime());
+			newAlarms[i-1].setAlarmSchedule(alarms[i].getAlarmSchedule());
+		}
+		length--;
+		
+		alarms = newAlarms;
+		writeList();
 	}
-	int pos = stringToInt(posStr)-1;
-	int count = 0;
-	cout << "HI" << endl;
-	Alarm* newAlarms = new Alarm[length - 1];
-	for (int i = 0; i < pos; i++) {
-		newAlarms[i].setAlarmName(alarms[i].getAlarmName());
-		newAlarms[i].setAlarmTime(alarms[i].getAlarmTime());
-		newAlarms[i].setAlarmSchedule(alarms[i].getAlarmSchedule());
+	else{
+		string s;
+		cout<<"\n\tHit enter to continue... ";
+		getline(cin, s);
 	}
-	for (int i = pos+1; i < length; i++) {
-		newAlarms[i-1].setAlarmName(alarms[i].getAlarmName());
-		newAlarms[i-1].setAlarmTime(alarms[i].getAlarmTime());
-		newAlarms[i-1].setAlarmSchedule(alarms[i].getAlarmSchedule());
-	}
-	length--;
-	
-	alarms = newAlarms;
-	writeList();
-	
+		
 }
 int AlarmList::displayList() { // display list of alarms, user-friendly
-	cout<<"\n\tThe following are your alarms:\n";
-	for (int i = 0; i < length; i++) {
-		cout << "\tALARM " << i+1 << "\n" << alarms[i].displayAlarm() << endl;
+	
+	if (length){
+		cout<<"\n\tThe following are your alarm(s):\n";
+		for (int i = 0; i < length; i++) {
+			cout << "\tALARM " << i+1 << "\n" << alarms[i].displayAlarm() << endl;
+		}
 	}
+	else
+		cout<<"\n\tIt seems like you have no alarms at the moment...\n";
 }
 bool AlarmList::isLeapYear(const int year){ //returns true if given year is leap year
 	if (year % 400 == 0)
@@ -578,35 +642,41 @@ string AlarmList::setAlarmSetting(const int option, const string alarm){
 		daysOfWeek = "1000001";
 	else if (option == 4) {	//unique case for option: date
 		string date;
-		cout << "Enter a date (DD/MM/YYYY): ";
+		cout << "\tEnter a date (DD/MM/YYYY): ";
 		getline(cin, date);
 		while (AlarmList::checkDate(date, alarm)) {
-			cerr << "Please enter a valid date (DD/MM/YYYY): ";
+			cerr << "\tPlease enter a valid date (DD/MM/YYYY): ";
 			getline(cin, date);
 		}
 		return date;	//will return a date with values separated by '/'
 	}
 	else {
-		const int daysInWeek = 7;
-		const string days[daysInWeek] = {"Sunday: ", "Monday: ", "Tuesday: ", "Wednesday: ", "Thursday: ", "Friday: ", "Saturday: "};
-		cout << "Select the days you wish the alarm to sound." << endl;
-		
-		//loop will ask for y/n for each day of the week and then add a '1' or '0' to the string accordingly
-		for (int i = 0; i < daysInWeek; i++) {
-			//get the input
-			cout << days[i];
-			getline(cin, input);
-			while (AlarmList::checkYesOrNo(input)) {
-				cout << "Please enter 'y' or 'n': ";
-				getline(cin, input);
-			}
-			//interpret the y or n as a 1 or 0
-			if (input == "Y" || input == "y")
-				daysOfWeek = daysOfWeek + "1";
-			else
-				daysOfWeek = daysOfWeek + "0";
-		}
-	}
+        const int daysInWeek = 7;
+        const string days[daysInWeek] = {"\tSunday: ", "\tMonday: ", "\tTuesday: ", "\tWednesday: ", "\tThursday: ", "\tFriday: ", "\tSaturday: "};
+
+        while (daysOfWeek == "" || daysOfWeek == "0000000") {    //"0000000" is an invalid schedule
+            if (daysOfWeek == "0000000") {
+                cout << "\n\tYou must choose at least one day!" << endl;
+            }
+            //loop will ask for y/n for each day of the week and then add a '1' or '0' to the string accordingly
+			daysOfWeek = "";
+            cout << "\tSelect the days you wish the alarm to sound (Y/N)." << endl;
+            for (int i = 0; i < daysInWeek; i++) {
+                //get the input
+                cout << days[i];
+                getline(cin, input);
+                while (AlarmList::checkYesOrNo(input)) {
+                    cout << "Please enter 'y' or 'n': ";
+                    getline(cin, input);
+                }
+                //interpret the y or n as a 1 or 0
+                if (input == "Y" || input == "y")
+                    daysOfWeek = daysOfWeek + "1";
+                else
+                    daysOfWeek = daysOfWeek + "0";
+            }
+        }
+    }
 	
 	//if 1, 2, 3, or 5
 	return daysOfWeek;
@@ -971,6 +1041,7 @@ int main(const int argc, const char* const args[]){
 	
 
 		if(menuAnswer[0] == '1'){//Run Alarm
+			alarmList.runAlarm();
 		}
 
 		else if(menuAnswer[0] == '2'){//Add an Alarm
@@ -982,7 +1053,7 @@ int main(const int argc, const char* const args[]){
 		}
 		else if (menuAnswer[0] == '4') {//View Alarms
 			alarmList.displayList();
-			cout<<"\tHit enter to continue... ";
+			cout<<"\n\tHit enter to continue... ";
 			getline(cin,menuAnswer);
 		}
 		else if(menuAnswer[0] == '5'){//Update User Info
@@ -1001,7 +1072,7 @@ int main(const int argc, const char* const args[]){
 			exit = true;
 		}
 
-		cout<<"\n\n\n\t_____________________________\n\n\n";
+		cout<<"\n\n\n\t_____________________________\n\n\n\n";
 	}
 	cout<<"\n\tThanks for using Eeyore! Sweet Dreams!"<<endl;
 	return 0;
