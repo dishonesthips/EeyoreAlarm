@@ -15,10 +15,7 @@ class Log {
 };
 
 Log::Log() {
-	//initially set strings to empty strings
-	message = "";
-	severity = "";
-	-
+
 	//initialize time and set to local
 	time_t now = time(0);
 	tm* ltm = localtime(&now);

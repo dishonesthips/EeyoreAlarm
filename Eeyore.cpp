@@ -7,13 +7,12 @@
 
 using namespace std;
 
-const string statFileName = "stats.txt";
 
 //global function declarations
-int log(const string message, const string severity);
-int checkRange(const string setting, const char lower, const char higher);
+int checkRange(const string setting, const int lower, const int higher);
 int gpioSetup(const int pinNum, int &rq, const int pinMode);
 int gpioRelease(const int pinNum, int &rq);
+
 
 
 //class declarations
@@ -46,7 +45,8 @@ class Alarm{
 		void setAlarmName(const string name);
 		void setAlarmTime(const int aTime);
 		void setAlarmSchedule(const string sched);
-				
+		void resetAlarm();
+		
 		string getAlarmName();
 		int getAlarmTime();
 		string getAlarmSchedule();
@@ -54,13 +54,15 @@ class Alarm{
 		
 		string displayAlarm();
 	private:
-		tm* timeFreeze;//holds all information at the time of alarm start
+		tm timeFreeze;//holds all information at the time of alarm start
 		bool ongoing; //on if the buzzer should be on
-
 		bool oneTime; //if it is a onetime alarm or a recurring alarm
 		string alarmName; 
 		int alarmTime; //minutes since midnight alarm will start
 		string schedule; //represents either days to go off or a single date
+		
+		const int maxSecondsPlaying = 60;
+		int timeDiff(tm* freeze, tm* now);
 };
 class AlarmList{
 	public:
@@ -303,14 +305,53 @@ Alarm::Alarm(){
 	schedule = "";
 	oneTime = false;
 	ongoing = false;
-	timeFreeze=NULL;
+	//timeFreeze = null;
 	
 }
 int Alarm::tick(tm* timeStruct, int motionState){
-
-	int currMin = (timeStruct->tm_hour);
+	//determine if the alarm is due to go off sometime today
+	bool goOffToday = false;
+	
+	if (oneTime){
+		if	((stoi(schedule.substr(0,2)) == timeStruct->tm_mday) 
+		    && (stoi(schedule.substr(3,2)) == (timeStruct->tm_mon+1))
+			&& (stoi(schedule.substr(6,4)) == (1900+timeStruct->tm_year))){
+				goOffToday = true;
+		}
+	}
+	else{
+		if(schedule[timeStruct->tm_wday] == '1')
+			goOffToday = true;
+	}
+	if (!goOffToday)
+		return 0;
 	
 	
+	//if the alarm is going off sometime today
+	if (ongoing){//if it is currently going
+		//cout<<"started at: "<<timeFreeze.tm_hour<<","<<timeFreeze.tm_min<<","<<timeFreeze.tm_sec<<endl;
+		//cout<<"now     is: "<<timeStruct->tm_hour<<","<<timeStruct->tm_min<<""<<timeStruct->tm_sec<<endl;
+		//int diff= 0;
+		int diff = difftime(mktime(timeStruct),mktime(&timeFreeze));
+		//cout<<diff<<endl;
+		if (diff >= maxSecondsPlaying || motionState){
+			cout<<diff<<endl;			
+			resetAlarm();
+			
+			return 0;
+		}
+		return 1;
+	}
+	else{//if it is not currently going
+		int currMin = (timeStruct->tm_hour)*60 + timeStruct->tm_min;
+		//cout<<currMin<<" "<<alarmTime<<endl;
+		if (currMin == alarmTime && timeStruct->tm_sec==0){//time to go off is now
+			ongoing = true;
+			timeFreeze = *timeStruct;
+			return 1;
+		}
+		return 0;
+	}	
 }
 string Alarm::printAlarm(){
 	
@@ -364,10 +405,14 @@ string Alarm::displayAlarm() {
 				formatSched = formatSched + daysWeekStr[i] + " ";
 			}
 		}
-		formatSched += "\n";
 	}
-	
+	formatSched += "\n";
+
 	return formatSched;
+}
+void Alarm::resetAlarm(){
+	ongoing = false;
+	//timeFreeze = null;
 }
 
 //AlarmList member function declarations
@@ -494,7 +539,6 @@ int AlarmList::runAlarm(){
 	int trigRet = gpioSetup(TRIGGER_PIN, rqTrigger, 0);
 	int buzzerRet = gpioSetup(BUZZER_PIN, rqBuzzer, 1);
 
-
 	
 	
 	int buzzerSum;
@@ -514,28 +558,37 @@ int AlarmList::runAlarm(){
 		sleep(sleepTime);
 		cout << "\tCurrent time: " << (ltm->tm_hour) << ":" << (ltm->tm_min) << ":" << (ltm->tm_sec) << endl;
 		
-		exitVal = gpio_get_value(EXIT_PIN)
+		exitVal = gpio_get_value(EXIT_PIN);
 		triggerVal = gpio_get_value(TRIGGER_PIN);
 		
 		
-		if(exitVal)
+		if(exitVal){
+			for (int i = 0; i < length; i++){
+				alarms[i].resetAlarm(); //read motionstate
+			}
 			exitButtonHit = true;
-		
-		for (int i = 0; i < length; i++){
-			buzzerSum += alarms[i].tick(ltm, triggerVal) //read motionstate
+			
 		}
 		
-		//if (buzzerSum){
-			//output buzzer 1
-	//	}
-		//else
-			//output buzzer 0
+		for (int i = 0; i < length; i++){
+			buzzerSum += alarms[i].tick(ltm, triggerVal); //read motionstate
+		}
+		
+		if (buzzerSum){
+			gpio_set_value(BUZZER_PIN, 1);
+		}
+		else
+			gpio_set_value(BUZZER_PIN, 0);
 		
 		
 		
 		
 	}
 	
+	//go through and delete all oneTime alarms;NOTE
+	
+	gpio_set_value(BUZZER_PIN, 0);
+
 	gpioRelease(EXIT_PIN, rqExit);
 	gpioRelease(TRIGGER_PIN, rqTrigger);
 	gpioRelease(BUZZER_PIN, rqBuzzer);
@@ -576,7 +629,7 @@ int AlarmList::addAlarm(){ //gets input for appending alarm and does it on the f
 		<< "5. Custom Schedule\n\n\t" 
 		<< "Enter your setting: ";
 	getline(cin, setting);
-	while (checkRange(setting,'1','5')) {
+	while (checkRange(setting,1,5)) {
 		cout << "Please enter a single digit in range [1,5]: ";
 		getline(cin, setting);
 	}
@@ -612,10 +665,10 @@ int AlarmList::addAlarm(){ //gets input for appending alarm and does it on the f
 int AlarmList::delAlarm(){ //remove an alarm from the list of alarms
 	if (length){
 		string posStr;
-		char maxLengthChar = length + '0';
+		//char maxLengthChar = length + '0';
 		cout << "\tSelect which alarm to delete (number): ";
 		getline(cin, posStr);
-		while (checkRange(posStr, '1', maxLengthChar)) {
+		while (checkRange(posStr, 1, length)) {
 			cerr << "\tPlease enter a single digit in range [1," << length << "]: " << endl;
 			getline(cin, posStr);
 		}
@@ -897,7 +950,7 @@ int AlarmList::checkDate(const string date, const string alarm){
 		cerr << "Choose a month in the future!" << endl;
 		return -5;
 	}
-	if (day < ltm->tm_mday && month == ltm->tm_mon) {
+	if (day < ltm->tm_mday && month == (ltm->tm_mon + 1)) {
 		cerr << "Choose a day in the future!" << endl;
 		return -5;
 	}
@@ -979,7 +1032,7 @@ int AlarmList::checkYesOrNo(const string yn){//error checks yes or no input
 }
 
 //Log member function declarations
-void Log::Log(){
+Log::Log(){
 	//initialize time and set to local
 	time_t now = time(0);
 	tm* ltm = localtime(&now);
@@ -1008,8 +1061,13 @@ void Log::log(string a, string b) {
 	logfile.close();
 }
 
+
+//global log class instance declaration
+Log myLog;
+
 //global function definitions
-int checkRange(const string setting, const char lower, const char higher) {
+
+int checkRange(const string setting, const int lower, const int higher) {
 	//check setting for empty string
 	if (setting.empty()) {
 		cerr << "Error: Empty string!" << endl;
@@ -1018,45 +1076,21 @@ int checkRange(const string setting, const char lower, const char higher) {
 	
 	//check for  (weird bug involving cin operator)
 	for (int i = 0; i < setting.length(); i++) {
-		if (setting[i] == '') {
-			cerr << "Don't use arrow keys!" << endl;
+		if (setting[i] == '' || setting[i]<'0' || setting[i]>'9') {
+			cerr << "Dont use arrow keys, only input numbers" << endl;
 			return -2;
 		}
 	}
 	
 	//check to make sure a valid option was chosen
-	if (setting.length() > 1) {
+	if (setting.length() > floor(log10(stoi(setting))+1)) {
 		cerr << "Error: Invalid option" << endl;
 		return -4;
 	}
-	else if (setting[0] < lower || setting[0] > higher) {
+	else if (stoi(setting)< lower || stoi(setting) > higher) {
 		cerr << "Error: Invalid option" << endl;
 		return -4;
 	}
-	
-	//1 2 3 4 5
-	return 0;
-}
-int log(const string severity, const string message) {
-	//initialize time and set to local
-	time_t now = time(0);
-	tm* ltm = localtime(&now);
-	
-	
-	//declare filename to be written to
-	const string filename = to_string(ltm->tm_year + 1900) + "-" + to_string(ltm->tm_mday) + "-" + to_string(ltm->tm_mon + 1) + "-" +
-							to_string(ltm->tm_hour) + "-" + to_string(ltm->tm_min) + "-" + to_string(ltm->tm_sec) + ".log";
-	
-	ofstream logfile; // declare the file object
-	logfile.open(filename, ios::app | ios::out); // open the file
-	if (!logfile.is_open()) {
-		cerr << "Unable to open file" << endl;
-		return -1; // Unable to open file
-	}
-	
-	logfile << (ltm->tm_year + 1900) << "-" << (ltm->tm_mon + 1) << "-" << ltm->tm_mday << "\t" 
-			<< ltm->tm_hour << ":" << ltm->tm_min << ":" << ltm->tm_sec << "\t(" << severity << "):\t " << message << "\r\n";
-	logfile.close();
 	
 	return 0;
 }
@@ -1134,7 +1168,7 @@ int main(const int argc, const char* const args[]){
 		string menuAnswer;
 		getline(cin, menuAnswer);
 		
-		while (checkRange(menuAnswer,'1','7')) {
+		while (checkRange(menuAnswer,1,7)) {
 			cout << "\tPlease enter a single digit in range [1,7]: ";
 			getline(cin, menuAnswer);
 		}
@@ -1166,17 +1200,17 @@ int main(const int argc, const char* const args[]){
 			
 		}
 		else if(menuAnswer[0] == '7'){//Exit
-			log("TRACE","Manual request to exit program");
+			myLog.log("TRACE","Manual request to exit program");
 			exit = true;
 		}
 		else{
-			log("WARNING","Error checking menuAnswer went wrong, treated as if exit request;");
+			myLog.log("WARNING","Error checking menuAnswer went wrong, treated as if exit request;");
 			exit = true;
 		}
 
 		cout<<"\n\n\n\t_____________________________\n\n\n\n";
 	}
-	cout<<"\n\tThanks for using Eeyore! Sweet Dreams!"<<endl;
+	cout<<"\n\tThanks for using Eeyore! Sweet Dreams!\n"<<endl;
 	return 0;
 
 }
