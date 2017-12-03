@@ -1,4 +1,5 @@
 #include "UserInfo.hpp"
+#include "Log.hpp"
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -6,11 +7,13 @@
 using namespace std;
 
 //UserInfo member function definitions
-UserInfo::UserInfo(){ //constructor
+UserInfo::UserInfo(Log log){ //constructor
 
 	name = "";
 	email = "";
+	logger = log;
 }
+
 void UserInfo::writeInfo(){//write info to a file with paramters info
 	//declare strings to be written to file
 	string nameFile;
@@ -38,6 +41,7 @@ void UserInfo::writeInfo(){//write info to a file with paramters info
 	outfile << nameFile << "," << emailFile << "\r\n";
 	outfile.close();
 }
+
 void UserInfo::readInfo(){//read info from a file and sets values of object UserInfo accordingly
 
 	//declare variable
@@ -65,6 +69,7 @@ void UserInfo::readInfo(){//read info from a file and sets values of object User
 		i++;
 	}
 }
+
 bool UserInfo::fileNotExist(){//check to see if text file already exists
 	ifstream infile;
 	infile.open(filename);
@@ -75,31 +80,25 @@ bool UserInfo::fileNotExist(){//check to see if text file already exists
 	infile.close();
 	return true; //file does not exist (yet) :smirk:
 }
+
 int UserInfo::checkName(const string input){//static error check valid name
 	//check for empty string
 	if (input.empty()) {
 		cerr << "Error: Empty string!" << endl;
 		return -2;
 	}
-	/*
-	//test print name COMMENT OUT OF FINAL COPY
-	cout << "Recieved name: ";
-	for (int i = 0; i < input.length(); i++) {
-		cout << input[i] << " ";
-	}
-	cout << endl;
-	*/
+	
 	//check for  (weird bug involving cin operator)
 	for (int i = 0; i < input.length(); i++) {
 		if (input[i] == '') {
 			cerr << "Don't use arrow keys!" << endl;
 			return -2;
 		}
-	}
-	
+	}	
 	//valid name
 	return 0;
 }
+
 int UserInfo::checkEmail(const string input){//static error check valid email
 	//check for empty string
 	if (input.empty()) {
@@ -108,14 +107,7 @@ int UserInfo::checkEmail(const string input){//static error check valid email
 	}
 	
 	int count = 0;
-	/*
-	//test print email COMMENT OUT OF FINAL COPY
-	cout << "Recieved email: ";
-	for (int i = 0; i < input.length() + 1; i++) {
-		cout << input[i] << " ";
-	}
-	cout << endl;
-	*/
+
 	//error checking for email name validity
 	if (input[count] == '.') {
 		cerr << "Error: Invalid dot usage" << endl;
@@ -133,7 +125,7 @@ int UserInfo::checkEmail(const string input){//static error check valid email
 	//first find an '@'; if cannot find within length of email characters, error
 	//the local-part of an email can only include certain characters; if invalid character, error
 	while (input[count] != '@') {
-		if (count > input.length()) {
+		if (count == input.length()-1) {
 			cerr << "Error: Invalid email. Cannot find '@'" << endl;
 			return -3;
 		}
@@ -181,6 +173,7 @@ int UserInfo::checkEmail(const string input){//static error check valid email
 	//valid email
 	return 0;
 }
+
 string UserInfo::capitalize(string name){//capitalize name for format
 	//declare new name to be capitalized
 	string newName = name;
@@ -196,9 +189,11 @@ string UserInfo::capitalize(string name){//capitalize name for format
 	//return capitalized name
 	return newName;
 }
+
 string UserInfo::getName(){ //getter name
 	return name;
 }
+
 string UserInfo::getEmail(){//getter email
 	return email;
 }

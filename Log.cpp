@@ -4,7 +4,7 @@
 using namespace std;
 
 //Log member function declarations
-Log::Log(){
+Log::Log() { //constructor opens log file named with the time that the program was run
 	//initialize time and set to local
 	time_t now = time(0);
 	tm* ltm = localtime(&now);
@@ -22,20 +22,20 @@ Log::Log(){
 	logfile.close();
 }
 
-void Log::log(string a, string b) {
+void Log::log(string severity, string message) { //logs a given message
 	ofstream logfile; // declare the file object
 	logfile.open(filename, ios::app | ios::out); // open the file
 	
 	//initialize time and set to local
 	time_t now = time(0);
 	tm* ltm = localtime(&now);
-
+	
 	//write data to log
 	logfile << (ltm->tm_year + 1900) << "-" <<
 		(ltm->tm_mon + 1) << "-" <<
 		ltm->tm_mday << "\t" <<
 		ltm->tm_hour << ":" <<
 		ltm->tm_min << ":" <<
-		ltm->tm_sec << "\t(" << a << "):\t " << b << "\r\n";
+		ltm->tm_sec << "\t(" << severity << "):\t " << message << "\r\n";
 	logfile.close();
 }
