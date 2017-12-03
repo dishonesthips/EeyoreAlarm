@@ -7,6 +7,7 @@
 
 #include "UserInfo.hpp"
 #include "AlarmList.hpp"
+#include "Alarm.hpp"
 #include "Log.hpp"
 
 using namespace std;

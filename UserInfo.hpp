@@ -1,3 +1,5 @@
+#ifndef USERINFO
+#define USERINFO
 #include <string>
 
 class UserInfo {
@@ -22,4 +24,4 @@ class UserInfo {
 		static int checkName(const std::string input);
 		static int checkEmail(const std::string input);
 };
-	
+#endif
