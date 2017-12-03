@@ -1,8 +1,0 @@
-#Eeyore Alarm
-
-This is an alarm that doesn't turn off until you leave your room.
-
-##Dependencies
-
-This program is designed to run on an Onion Omega2. It requires mailsend to be
-installed, and depends on the ugpio library.
