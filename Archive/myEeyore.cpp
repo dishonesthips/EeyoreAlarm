@@ -8,7 +8,7 @@ using namespace std;
 const string statFileName = "stats.txt";
 
 //global function declarations
-int checkRange(const string setting, const char lower, const char higher);
+int checkRange(const string setting, const int lower, const int higher);
 
 //class declarations
 class UserInfo {
@@ -91,6 +91,40 @@ class Log {
 		string filename;
 		string message;
 		string severity;
+};
+class ReadStat {
+	public:
+		ReadStat(const string);
+		void readData();
+		void specialDataLen(const int);
+		void specialData(const int, const int*);
+		void setMax();
+		void setMin();
+		void setMean();
+		void sort();
+		void setMedian();
+		bool fileExists();
+		void displayStats();
+		int getLength();
+		int* getData();
+		
+	private:
+		string filename;
+		int* data;
+		int length;
+		int max;
+		int min;
+		float mean;
+		int median;
+};
+class ReadStatList {
+	public:
+		ReadStatList();
+		int runStats();
+		const int length = 10;
+		const int lengthDays = 7;
+	private:
+		ReadStat* stats[10];
 };
 
 //UserInfo member function declarations
@@ -535,7 +569,7 @@ int AlarmList::addAlarm(){ //gets input for appending alarm and does it on the f
 		<< "5. Custom Schedule\n\n\t" 
 		<< "Enter your setting: ";
 	getline(cin, setting);
-	while (checkRange(setting,'1','5')) {
+	while (checkRange(setting, 1, 5)) {
 		cout << "Please enter a single digit in range [1,5]: ";
 		getline(cin, setting);
 	}
@@ -571,16 +605,14 @@ int AlarmList::addAlarm(){ //gets input for appending alarm and does it on the f
 int AlarmList::delAlarm(){ //remove an alarm from the list of alarms
 	if (length){
 		string posStr;
-		char maxLengthChar = length + '0';
 		cout << "\tSelect which alarm to delete (number): ";
 		getline(cin, posStr);
-		while (checkRange(posStr, '1', maxLengthChar)) {
+		while (checkRange(posStr, 1, length)) {
 			cerr << "\tPlease enter a single digit in range [1," << length << "]: " << endl;
 			getline(cin, posStr);
 		}
 		int pos = stoi(posStr)-1;
 		int count = 0;
-		cout << "HI" << endl;
 		Alarm* newAlarms = new Alarm[length - 1];
 		for (int i = 0; i < pos; i++) {
 			newAlarms[i].setAlarmName(alarms[i].getAlarmName());
@@ -851,20 +883,20 @@ int AlarmList::checkDate(const string date, const string alarm){
 		cerr << "Choose a year in the future!" << endl;
 		return -5;
 	}
-	if (month < (ltm->tm_mon + 1) && year == ltm->tm_year) {
+	if (month < (ltm->tm_mon + 1) && year == (ltm->tm_year + 1900)) {
 		cerr << "Choose a month in the future!" << endl;
 		return -5;
 	}
-	if (day < ltm->tm_mday && month == ltm->tm_mon) {
+	if (day < ltm->tm_mday && month == (ltm->tm_mon + 1) && year == (ltm->tm_year + 1900)) {
 		cerr << "Choose a day in the future!" << endl;
 		return -5;
 	}
-	if (hour < ltm->tm_hour && day == ltm->tm_mday) {
-		cerr << "Choose a time in the future! (time)" << endl;
+	if (hour < ltm->tm_hour && day == ltm->tm_mday && month == (ltm->tm_mon + 1) && year == (ltm->tm_year + 1900)) {
+		cerr << "Choose a time in the future! (hour)" << endl;
 		return -5;
 	}
-	if (minute < ltm->tm_min && hour == ltm->tm_hour) {
-		cerr << "Choose a time in the future! (time)" << endl;
+	if (minute < ltm->tm_min && hour == ltm->tm_hour && day == ltm->tm_mday && month == (ltm->tm_mon + 1) && year == (ltm->tm_year + 1900)) {
+		cerr << "Choose a time in the future! (min)" << endl;
 		return -5;
 	}
 	
@@ -971,28 +1003,209 @@ void Log::log(string a, string b) {
 	logfile.close();
 }
 
-//global function definitions
-int checkRange(const string setting, const char lower, const char higher) {
-	//check setting for empty string
-	if (setting.empty()) {
-		cerr << "Error: Empty string!" << endl;
-		return -4;
+ReadStat::ReadStat(string nameOfFile) {
+	data = NULL;
+	length = 0;
+	filename = nameOfFile;
+	min = -1;
+	max = -1;
+	mean = -1;
+	median = -1;
+}
+void ReadStat::readData() {
+	if (fileExists()) {
+		string line;
+		ifstream statfile;
+		statfile.open(filename);
+		length = 0;
+		
+		while(!statfile.eof()){
+			getline(statfile,line);
+			if(!line.empty() && line.compare("\r")!=0)
+				length++;
+		}
+		
+		statfile.close();
+		ifstream statfileR;
+		statfileR.open(filename);
+		
+		int* tmp = data;
+		data = new int[length];
+		delete tmp;
+		
+		for (int i = 0; i < length; i++) {
+			getline(statfileR, line);
+			data[i] = stoi(line);
+		}
+		
+		statfileR.close();
+	}
+	else {
+		//cout << "File does not exist -__-" << endl;
+	}
+}
+void ReadStat::specialDataLen(const int newLen) {
+	data = new int[newLen];
+	length = 0;
+}
+void ReadStat::specialData(const int newLen, const int* dataset) {
+	for (int i = length; i < newLen + length; i++) {
+		data[i] = dataset[i - length];
+	}
+	length += newLen;
+}
+void ReadStat::setMax() {
+	max = data[0];
+	for (int i = 0; i < length; i++) {
+		if (data[i] > max)
+			max = data[i];
+	}
+}
+void ReadStat::setMin() {
+	min = data[0];
+	
+	for (int i = 0; i < length; i++) {
+		if (data[i] < min)
+			min = data[i];
+	}
+}
+void ReadStat::setMean() {
+	mean = 0;
+	sort();
+	for (int i = 0; i < length; i++) {
+		mean += data[i];
+	}
+	mean /= length;
+}
+void ReadStat::sort() {
+	int temp;
+	for (int i = 0; i < length; i++) {
+		for (int j = 0; j < length - 1; j++) {
+			if (data[j + 1] > data[j]) {
+				temp = data[j];
+				data[j] = data[j + 1];
+				data[j + 1] = temp;
+			}
+		}
+	}
+}
+void ReadStat::setMedian() {
+	if (length % 2)
+		median = data[length / 2];
+	else
+		median = ((data[length / 2 - 1] + data[length / 2]) / 2);
+}
+bool ReadStat::fileExists() {
+	ifstream statfile;
+	statfile.open(filename);
+	if(statfile.is_open()) {
+		statfile.close();
+		return true;	//file exists
+	}
+	statfile.close();
+	return false; //file does not exist (yet) :smirk:
+}
+void ReadStat::displayStats() {
+	if (length > 0) {
+		int daysInWeek = 7;
+		string daysOfWeek[7];
+		
+		setMax();
+		setMin();
+		setMean();
+		setMedian();
+		
+		cout << "\n\n\tSTATISTICS: " <<
+				"\n\tMax: " << max << 
+				"\n\tMin: " << min <<
+				"\n\tMean: " << mean << 
+				"\n\tMedian: " << median << endl;
+	}
+	else
+		cout << "\tNo data" << endl;
+}
+int ReadStat::getLength() {
+	return length;
+}
+int* ReadStat::getData() {
+	return data;
+}
+
+
+ReadStatList::ReadStatList() {
+	//populate array of stats, 0-6 are normal, 7-9 are special
+	for (int i = 0; i < length; i++) {
+		stats[i] = new ReadStat("stats" + to_string(i) + ".txt");
 	}
 	
-	//check for  (weird bug involving cin operator)
-	for (int i = 0; i < setting.length(); i++) {
-		if (setting[i] == '') {
-			cerr << "Don't use arrow keys!" << endl;
-			return -2;
+	//simple read for the days of the week stats
+	for (int i = 0; i < lengthDays; i++) {
+		stats[i]->readData();
+	}
+	
+	//unique reads for the special statistics
+	//first find the total length of the array
+	int tmpLen = 0;
+	for (int i = 1; i < lengthDays - 1; i++) {
+		tmpLen += stats[i]->getLength();
+	}
+	stats[7]->specialDataLen(tmpLen);
+	//then pass in the desired values to be summed
+	for (int i = 1; i < lengthDays - 1; i++) {
+		stats[7]->specialData(stats[i]->getLength(), stats[i]->getData());
+	}
+	tmpLen = 0;
+	//do this for all three special functions, but using the desired values
+	//i.e. weekday stats only use weekday values, weekend only weekend, total uses all
+	
+	tmpLen += stats[0]->getLength();
+	tmpLen += stats[lengthDays - 1]->getLength();
+	stats[8]->specialDataLen(tmpLen);
+	stats[8]->specialData(stats[0]->getLength(), stats[0]->getData());
+	stats[8]->specialData(stats[lengthDays - 1]->getLength(), stats[lengthDays - 1]->getData());
+	tmpLen = 0;
+	
+	for (int i = 0; i < lengthDays; i++) {
+		tmpLen += stats[i]->getLength();
+	}
+	stats[9]->specialDataLen(tmpLen);
+	for (int i = 0; i < lengthDays; i++) {
+		stats[9]->specialData(stats[i]->getLength(), stats[i]->getData());
+	}
+}
+int ReadStatList::runStats() {
+	cout << "\n\n\tList of Statistics " << endl <<
+			"\t1. Sunday" << endl <<
+			"\t2. Monday" << endl <<
+			"\t3. Tuesday" << endl <<
+			"\t4. Wednesday" << endl <<
+			"\t5. Thursday" << endl <<
+			"\t6. Friday" << endl <<
+			"\t7. Saturday" << endl <<
+			"\t8. Weekday" << endl <<
+			"\t9. Weekends" << endl <<
+			"\t10. Total" << endl <<
+			"\tWhich statistic would you like to view? (1-10): ";
+	string statNum;
+	getline(cin, statNum);
+	while (checkRange(statNum, 1, length)) {
+		cout << "\tPlease enter a single digit in range [1,10]: ";
+		getline(cin, statNum);
+	}
+	stats[stoi(statNum) - 1]->displayStats();
+	return 0;
+}
+//global function definitions
+int checkRange(const string numStr, const int lower, const int higher) {
+	for (int i = 0; i < numStr.length(); i++) {
+		if (numStr[i] < '0' || numStr[i] > '9') {
+			cerr << "Error: Not a number" << endl;
+			return -4;
 		}
 	}
 	
-	//check to make sure a valid option was chosen
-	if (setting.length() > 1) {
-		cerr << "Error: Invalid option" << endl;
-		return -4;
-	}
-	else if (setting[0] < lower || setting[0] > higher) {
+	int num = stoi(numStr);
+	if (num < lower || num > higher) {
 		cerr << "Error: Invalid option" << endl;
 		return -4;
 	}
@@ -1007,6 +1220,7 @@ int main(const int argc, const char* const args[]){
 	UserInfo user;
 	AlarmList alarmList;
 	alarmList.readList();
+	ReadStatList stats;
 	
 	if (user.fileNotExist()) { 
 		cout<<"\n\tWelcome to Eeyore! Is this your first time?\n\tI don't recognize you...\n\n";
@@ -1014,7 +1228,7 @@ int main(const int argc, const char* const args[]){
 	}
 	user.readInfo();
 	//cout << user.getName() << " " << user.getEmail() << endl;
-
+	
 	while (!exit){
 		
 		
@@ -1031,7 +1245,7 @@ int main(const int argc, const char* const args[]){
 		string menuAnswer;
 		getline(cin, menuAnswer);
 		
-		while (checkRange(menuAnswer,'1','7')) {
+		while (checkRange(menuAnswer, 1, 7)) {
 			cout << "\tPlease enter a single digit in range [1,7]: ";
 			getline(cin, menuAnswer);
 		}
@@ -1060,7 +1274,9 @@ int main(const int argc, const char* const args[]){
 			user.readInfo();
 		}
 		else if(menuAnswer[0] == '6'){//View Statistics
-			
+			stats.runStats();
+			cout<<"\n\tHit enter to continue... ";
+			getline(cin,menuAnswer);
 		}
 		else if(menuAnswer[0] == '7'){//Exit
 			mylog.log("TRACE","Manual request to exit program");
