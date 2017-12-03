@@ -9,12 +9,16 @@ using namespace std;
 
 const string statFileName = "stats.txt";
 
+//gpio pin numbers
+const int EXIT_PIN = 0;
+const int TRIGGER_PIN = 1;
+const int BUZZER_PIN = 11;
+
 //global function declarations
 int log(const string message, const string severity);
 int checkRange(const string setting, const char lower, const char higher);
 int gpioSetup(const int pinNum, int &rq, const int pinMode);
 int gpioRelease(const int pinNum, int &rq);
-
 
 //class declarations
 class UserInfo {
@@ -1009,6 +1013,52 @@ void Log::log(string a, string b) {
 }
 
 //global function definitions
+//pinMode == 0 for input, pinMode != 0 for output
+int gpioSetup(const int pinNum, int &rq, const int pinMode) {
+	int rv;
+	// check if gpio is already exported
+	if ((rq = gpio_is_requested(pinNum)) < 0) {
+		cerr << "Error: GPIO pin " << pinNum << " is already in use."
+			<< endl;
+		return -1;
+	}
+	// export the gpio
+	if (!rq) {
+		if ((rv = gpio_request(pinNum, NULL)) < 0) {
+			cerr << "Error: GPIO pin " << pinNum <<
+				" could not be exported." << endl;
+			return -1;
+		}
+	}
+	// set to input direction
+	if (pinMode == 0) {
+		if ((rv = gpio_direction_input(pinNum)) < 0) {
+			cerr << "Error: GPIO pin " << pinNum <<
+				" could not be set as input." << endl;
+			return -1;
+		}
+	} else {
+		if ((rv = gpio_direction_output(pinNum, 0)) < 0) {
+			cerr << "Error: GPIO pin " << pinNum <<
+			       "could not be set as output." << endl;
+			return -1;
+		}
+	}
+	return 0;
+}
+
+int gpioRelease(const int pinNum, int &rq) {
+	if (!rq) {
+		if (gpio_free(pinNum) < 0) {
+			cerr << "Error: Could not free GPIO pin " << pinNum <<
+				endl;
+			return -1;
+		}
+		return 0;
+	}
+	return 1;
+}
+
 int checkRange(const string setting, const char lower, const char higher) {
 	//check setting for empty string
 	if (setting.empty()) {
@@ -1092,6 +1142,7 @@ int gpioSetup(const int pinNum, int &rq, const int pinMode) {
 	}
 	return 0;
 }
+
 int gpioRelease(const int pinNum, int &rq) {
 	if (!rq) {
 		if (gpio_free(pinNum) < 0) {
@@ -1104,11 +1155,35 @@ int gpioRelease(const int pinNum, int &rq) {
 	return 1;
 }
 
-int main(const int argc, const char* const args[]){
+int main(){
 	bool exit = false;
 	UserInfo user;
+	int exitVal;
+	int rqExit;
+	int triggerVal;
+	int rqTrigger;
+	int rqBuzzer;
 	AlarmList alarmList;
 	alarmList.readList();
+
+	//set up gpio pins
+	int exitRet = gpioSetup(EXIT_PIN, rqExit, 0);
+	int trigRet = gpioSetup(TRIGGER_PIN, rqTrigger, 0);
+	int buzzerRet = gpioSetup(BUZZER_PIN, rqBuzzer, 1);
+
+	//check if error occurred
+	if (exitRet == -1 || trigRet == -1 || buzzerRet == -1) {
+		cerr << "Error: GPIO could not be initialised." << endl;
+		return -1;
+	}
+	//test read
+	cout << "Exit: " << gpio_get_value(EXIT_PIN) << endl;
+	cout << "Trigger: " << gpio_get_value(TRIGGER_PIN) << endl;
+	//test write
+	cout << "Alarm test" << endl;
+	gpio_set_value(BUZZER_PIN, 1);
+	sleep(1);
+	gpio_set_value(BUZZER_PIN, 0);
 	
 	if (user.fileNotExist()) {
 		cout<<"\n\tWelcome to Eeyore! Is this your first time?\n\tI don't recognize you...\n\n";
@@ -1119,7 +1194,6 @@ int main(const int argc, const char* const args[]){
 	cout<<"\n\n\n\t_____________________________\n\n\n\n";
 
 	while (!exit){
-		
 		
 		cout<<"\tWelcome to Eeyore, "<<user.getName()<<"\n\n\t"
 			<<"1. Run Alarm System\n\t"
@@ -1138,9 +1212,6 @@ int main(const int argc, const char* const args[]){
 			cout << "\tPlease enter a single digit in range [1,7]: ";
 			getline(cin, menuAnswer);
 		}
-		
-		
-	
 
 		if(menuAnswer[0] == '1'){//Run Alarm
 			alarmList.runAlarm();
@@ -1170,13 +1241,17 @@ int main(const int argc, const char* const args[]){
 			exit = true;
 		}
 		else{
-			log("WARNING","Error checking menuAnswer went wrong, treated as if exit request;");
 			exit = true;
 		}
 
 		cout<<"\n\n\n\t_____________________________\n\n\n\n";
 	}
-	cout<<"\n\tThanks for using Eeyore! Sweet Dreams!"<<endl;
+
+	cout << endl << "\tThanks for using Eeyore! Sweet Dreams!" << endl;
+	//release gpio pins
+	gpioRelease(EXIT_PIN, rqExit);
+	gpioRelease(TRIGGER_PIN, rqTrigger);
+	gpioRelease(BUZZER_PIN, rqBuzzer);
 	return 0;
 
 }
