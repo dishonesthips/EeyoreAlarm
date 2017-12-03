@@ -103,10 +103,14 @@ class ReadStat {
 		void setMean();
 		void sort();
 		void setMedian();
+		void histogram();
 		bool fileExists();
+		string* getStats();
 		void displayStats();
+		void writeStats(const string*, const string);
 		int getLength();
 		int* getData();
+		const int bucketsLen = 8;
 		
 	private:
 		string filename;
@@ -116,6 +120,7 @@ class ReadStat {
 		int min;
 		float mean;
 		int median;
+		int buckets[8];
 };
 class ReadStatList {
 	public:
@@ -810,66 +815,17 @@ int AlarmList::checkDate(const string date, const string alarm){
 		return -5;
 	}
 	
-	//declare counters
-	int numDayDigits = 0;
-	int numMonthDigits = 0;
-	int numYearDigits = 0;
-	bool isDay = true;
-	bool isMonth = false;
-	bool isYear = false;
-	
+	//check for format
+	if (date.length() != 10 || date[2] != '/' || date[5] > '/') {
+		cerr << "Error: Check your format" << endl;
+		return -5;
+	}
 	for (int i = 0; i < date.length(); i++) {
-		//check for arrow keys
-		if (date[i] == '') {
-			cerr << "Don't use arrow keys!" << endl;
+		if ((date[i] < '0' || date[i] > '9') && date[i] != '/') {
+			cerr << "Error: Numbers and slashes only" << endl;
 			return -5;
 		}
-		
-		//check for format
-		if ((date[i] < '0' || date[i] > '9') && date[i] != '/' && date[i] != 0) {
-			cerr << "Error: Check your format" << endl;
-			return -5;
-		}
-		
-		//switch states of day, month, year according to position of i in the string date
-		if (date[i] == '/') {
-			if (isDay) {
-				isDay = false;
-				isMonth = true;
-			}
-			else {
-				isMonth = false;
-				isYear = true;
-			}
-		}
-		else {
-			//increment day/month/year counts
-			if (isDay)
-				numDayDigits++;
-			else if (isMonth)
-				numMonthDigits++;
-			else
-				numYearDigits++;
-		}
 	}
-	
-	//check for correct amount of day/month/year digits
-	if (numDayDigits != 2) {
-		cerr << "Error: Invalid day" << endl;
-		return -5;
-	}
-	if (numMonthDigits != 2) {
-		cerr << "Error: Invalid month" << endl;
-		return -5;
-	}
-	if (numYearDigits != 4) {
-		cerr << "Error: Invalid year" << endl;
-		return -5;
-	}
-	
-	//initialize time and set to local to compare dates
-	time_t now = time(0);
-	tm* ltm = localtime(&now);
 	
 	//declare day, month, year, hour, minute ints
 	const int day = stoi(date.substr(0,2));
@@ -877,28 +833,6 @@ int AlarmList::checkDate(const string date, const string alarm){
 	const int year = stoi(date.substr(6,4));
 	const int hour = stoi(alarm.substr(0,2));
 	const int minute = stoi(alarm.substr(3,2));
-	
-	//cannot choose a date from the past
-	if (year < (ltm->tm_year + 1900)) {
-		cerr << "Choose a year in the future!" << endl;
-		return -5;
-	}
-	if (month < (ltm->tm_mon + 1) && year == (ltm->tm_year + 1900)) {
-		cerr << "Choose a month in the future!" << endl;
-		return -5;
-	}
-	if (day < ltm->tm_mday && month == (ltm->tm_mon + 1) && year == (ltm->tm_year + 1900)) {
-		cerr << "Choose a day in the future!" << endl;
-		return -5;
-	}
-	if (hour < ltm->tm_hour && day == ltm->tm_mday && month == (ltm->tm_mon + 1) && year == (ltm->tm_year + 1900)) {
-		cerr << "Choose a time in the future! (hour)" << endl;
-		return -5;
-	}
-	if (minute < ltm->tm_min && hour == ltm->tm_hour && day == ltm->tm_mday && month == (ltm->tm_mon + 1) && year == (ltm->tm_year + 1900)) {
-		cerr << "Choose a time in the future! (min)" << endl;
-		return -5;
-	}
 	
 	//check for valid time and year
 	const int numMonths = 12;
@@ -932,6 +866,40 @@ int AlarmList::checkDate(const string date, const string alarm){
 		if (month == (i + 1) && day > daysInMonths[i]) {
 			cerr << "Invalid date" << endl;
 			return -5;
+		}
+	}
+	
+	//initialize time and set to local to compare dates
+	time_t now = time(0);
+	tm* ltm = localtime(&now);
+	
+	//cannot choose a date from the past
+	if (year < (ltm->tm_year + 1900)) {
+		cerr << "Choose a year in the future!" << endl;
+		return -5;
+	}
+	else if (year == (ltm->tm_year + 1900)) {
+		if (month < (ltm->tm_mon + 1)) {
+			cerr << "Choose a month in the future!" << endl;
+			return -5;
+		}
+		else if (month == (ltm->tm_mon + 1)) {
+			if (day < ltm->tm_mday) {
+				cerr << "Choose a day in the future!" << endl;
+				return -5;
+			}
+			else if (day == ltm->tm_mday) {
+				if (hour < ltm->tm_hour) {
+					cerr << "Choose a time in the future! (hour)" << endl;
+					return -5;
+				}
+				else if (hour == ltm->tm_hour) {
+					if (minute < ltm->tm_min) {
+						cerr << "Choose a time in the future! (min)" << endl;
+						return -5;
+					}
+				}
+			}
 		}
 	}
 	
@@ -1011,10 +979,13 @@ ReadStat::ReadStat(string nameOfFile) {
 	max = -1;
 	mean = -1;
 	median = -1;
+	for (int i = 0; i < bucketsLen; i++) {
+		buckets[i] = 0;
+	}
 }
 void ReadStat::readData() {
 	if (fileExists()) {
-		string line;
+		string line = "";
 		ifstream statfile;
 		statfile.open(filename);
 		length = 0;
@@ -1024,6 +995,7 @@ void ReadStat::readData() {
 			if(!line.empty() && line.compare("\r")!=0)
 				length++;
 		}
+		line = "";
 		
 		statfile.close();
 		ifstream statfileR;
@@ -1032,6 +1004,7 @@ void ReadStat::readData() {
 		int* tmp = data;
 		data = new int[length];
 		delete tmp;
+		
 		
 		for (int i = 0; i < length; i++) {
 			getline(statfileR, line);
@@ -1095,6 +1068,18 @@ void ReadStat::setMedian() {
 	else
 		median = ((data[length / 2 - 1] + data[length / 2]) / 2);
 }
+void ReadStat::histogram() {
+	for (int i = 0; i < length; i++) {
+		if (data[i] < 10)
+			buckets[0]++;
+		else if (data[i] < 30)
+			buckets[1]++;
+		else if (data[i] >= 300)
+			buckets[7]++;
+		else
+			buckets[((data[i] - 1) / 60) + 2]++;
+	}
+}
 bool ReadStat::fileExists() {
 	ifstream statfile;
 	statfile.open(filename);
@@ -1105,7 +1090,8 @@ bool ReadStat::fileExists() {
 	statfile.close();
 	return false; //file does not exist (yet) :smirk:
 }
-void ReadStat::displayStats() {
+string* ReadStat::getStats() {
+	string* printStats;
 	if (length > 0) {
 		int daysInWeek = 7;
 		string daysOfWeek[7];
@@ -1114,15 +1100,61 @@ void ReadStat::displayStats() {
 		setMin();
 		setMean();
 		setMedian();
+		histogram();
 		
-		cout << "\n\n\tSTATISTICS: " <<
-				"\n\tMax: " << max << 
-				"\n\tMin: " << min <<
-				"\n\tMean: " << mean << 
-				"\n\tMedian: " << median << endl;
+		printStats = new string[13];
+		printStats[0] = "Max: " + to_string(max) + "\r\n";
+		printStats[1] = "Min: " + to_string(min) + "\r\n";
+		printStats[2] = "Mean: " + to_string(mean) + "\r\n";
+		printStats[3] = "Median: " + to_string(median) + "\r\n\r\n";
+		printStats[4] = "Histogram:\r\n";
+		printStats[5] = "[0,9] sec: " + to_string(buckets[0]) + "\r\n";
+		printStats[6] = "[10,29] sec: " + to_string(buckets[1]) + "\r\n";
+		printStats[7] = "[30,59] sec: " + to_string(buckets[2])	 + "\r\n";
+		printStats[8] = "[1,2) min: " + to_string(buckets[3]) + "\r\n";
+		printStats[9] = "[2,3) min: " + to_string(buckets[4]) + "\r\n";
+		printStats[10] = "[3,4) min: " + to_string(buckets[5]) + "\r\n";
+		printStats[11] = "[4,5) min: " + to_string(buckets[6]) + "\r\n";
+		printStats[12] = "[5-10] min: " + to_string(buckets[7]) + "\r\n";						  
+	}
+	else {
+		printStats = new string[1];
+		printStats[0] = "No stats\r\n";
+	}
+	return printStats;
+}
+void ReadStat::displayStats() {
+	string* printStats = getStats();
+	if (length > 0) {
+		cout << endl << endl;
+		for (int i = 0; i < 13; i++) {
+			cout << "\t" << printStats[i];
+		}
+	}
+	else {
+		cout << "\t" << printStats[0];
+		
+	}
+	//delete printStats;
+}
+void ReadStat::writeStats(const string* printStats, const string title) {
+	ofstream writefile;
+	if (!title.compare("SUNDAY")) {
+		writefile.open("Statistics Summary.stat");
+		writefile << "STATISTICS SUMMARY\r\n__________________\r\n";
 	}
 	else
-		cout << "\tNo data" << endl;
+		writefile.open("Statistics Summary.stat", ios::app | ios:: out);
+	
+	writefile << "\r\n" << title << ":\r\n";
+	if (length > 0) {
+		for (int i = 0; i < 13; i++) {
+			writefile << printStats[i] << endl;
+		}
+	}
+	else
+		writefile << printStats[0] << endl;
+	writefile.close();
 }
 int ReadStat::getLength() {
 	return length;
@@ -1174,6 +1206,7 @@ ReadStatList::ReadStatList() {
 	}
 }
 int ReadStatList::runStats() {
+	string titles[10] = {"SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "WEEKDAYS", "WEEKENDS", "TOTAL"};
 	cout << "\n\n\tList of Statistics " << endl <<
 			"\t1. Sunday" << endl <<
 			"\t2. Monday" << endl <<
@@ -1182,7 +1215,7 @@ int ReadStatList::runStats() {
 			"\t5. Thursday" << endl <<
 			"\t6. Friday" << endl <<
 			"\t7. Saturday" << endl <<
-			"\t8. Weekday" << endl <<
+			"\t8. Weekdays" << endl <<
 			"\t9. Weekends" << endl <<
 			"\t10. Total" << endl <<
 			"\tWhich statistic would you like to view? (1-10): ";
@@ -1192,11 +1225,24 @@ int ReadStatList::runStats() {
 		cout << "\tPlease enter a single digit in range [1,10]: ";
 		getline(cin, statNum);
 	}
+	
 	stats[stoi(statNum) - 1]->displayStats();
+	
+	stats[0]->writeStats(stats[0]->getStats(), titles[0]);
+	for (int i = 1; i < 10; i++) {
+		stats[i]->writeStats(stats[i]->getStats(), titles[i]);
+	}
 	return 0;
 }
+
+
 //global function definitions
 int checkRange(const string numStr, const int lower, const int higher) {
+	if (!numStr.length()) {
+		cerr << "Error: Empty string" << endl;
+		return -4;
+	}
+	
 	for (int i = 0; i < numStr.length(); i++) {
 		if (numStr[i] < '0' || numStr[i] > '9') {
 			cerr << "Error: Not a number" << endl;
@@ -1227,7 +1273,6 @@ int main(const int argc, const char* const args[]){
 		user.writeInfo();
 	}
 	user.readInfo();
-	//cout << user.getName() << " " << user.getEmail() << endl;
 	
 	while (!exit){
 		
