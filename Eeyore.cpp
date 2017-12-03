@@ -5,115 +5,12 @@
 #include <unistd.h>
 #include <ugpio/ugpio.h>
 
+#include "Log.hpp"
+#include "UserInfo.hpp"
+#include "Alarm.hpp"
+#include "AlarmList.hpp"
+
 using namespace std;
-
-
-//class declarations
-class Log {
-	public:
-		Log();
-		void log(string, string);
-		
-	private:
-		string filename;
-};
-class UserInfo {
-	public:
-		const string filename = "userInfo.txt";
-		UserInfo(Log log);	//declare constructor
-		
-		//declare functions
-		bool fileNotExist();
-		string getName();
-		string getEmail();
-		void writeInfo();
-		void readInfo();
-		
-	private:
-		//declare private variables
-		string name;
-		string email;
-			
-		//error check methods do not require an instance of a class
-		string capitalize(string name);
-		static int checkName(const string input);
-		static int checkEmail(const string input);
-		
-		Log logger;
-};
-class Alarm{
-	public:
-		static const int maxSecondsPlaying = 60;
-		
-		Alarm();
-		void resetAlarm();
-
-		int tick(tm* timeStruct, int motionState); //return 1 or 0 if buzzer should be on/off for this alarm
-		
-		void setAlarmName(const string name);
-		void setAlarmTime(const int aTime);
-		void setAlarmSchedule(const string sched);		
-		string getAlarmName();
-		int getAlarmTime();
-		string getAlarmSchedule();
-		bool getOneTime();
-		string getFormatTime();
-		
-		string printAlarm();
-		string displayAlarm();
-	private:
-		tm timeFreeze;//holds all information at the time of alarm start
-		bool ongoing; //on if the buzzer should be on
-		bool oneTime; //if it is a onetime alarm or a recurring alarm
-		string alarmName; 
-		int alarmTime; //minutes since midnight alarm will start
-		string schedule; //represents either days to go off or a single date
-		
-		void writeStat(int day, int time);
-		
-};
-class AlarmList{
-	public:
-		static int checkRange(const string setting, const int lower, const int higher);
-
-	
-		const int EXIT_PIN = 0;
-		const int TRIGGER_PIN = 1;
-		const int BUZZER_PIN = 11;	
-
-		
-		const string filename = "alarms.txt";
-		
-		AlarmList(Log log);
-		int runAlarm();
-		int addAlarm();
-		int delAlarm();
-		int readList();
-		int writeList();
-		int displayList();
-		
-	private:
-		Alarm* alarms;
-		int length;
-		
-		int delAlarm(int pos);
-		static bool isLeapYear(const int year);
-		static int checkName(const string name);
-		static int checkAlarm(const string alarm);
-		static int checkDate(const string date, const string alarm);
-		static int checkYesOrNo(const string yn);
-		static string setAlarmSetting(const int option, const string alarm);
-		
-		int gpioSetup(const int pinNum, int &rq, const int pinMode);
-		int gpioRelease(const int pinNum, int &rq);
-		int rqExit;
-		int rqTrigger;
-		int rqBuzzer;
-		
-		Log logger;
-};
-
-
 
 //Log member function declarations
 Log::Log(){//constructor opens log file named with the time that the program was run
