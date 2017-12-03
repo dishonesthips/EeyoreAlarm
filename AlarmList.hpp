@@ -1,3 +1,5 @@
+#ifndef ALARMLIST
+#define ALARMLIST
 #include <string>
 #include "Alarm.hpp"
 
@@ -26,3 +28,4 @@ class AlarmList{
 		static int checkYesOrNo(const std::string yn);
 		static std::string setAlarmSetting(const int option, const std::string alarm);
 };
+#endif

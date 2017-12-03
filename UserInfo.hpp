@@ -1,6 +1,5 @@
 #ifndef USERINFO
-#def USERINFO
-
+#define USERINFO
 #include <string>
 
 class UserInfo {

@@ -1,3 +1,5 @@
+#ifndef LOG
+#define LOG
 #include <string>
 
 class Log {
@@ -8,3 +10,4 @@ class Log {
 	private:
 		std::string filename;
 };
+#endif

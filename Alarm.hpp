@@ -1,5 +1,6 @@
+#ifndef ALARM
+#define ALARM
 #include <string>
-
 class Alarm{
 	public:
 		int tick(tm* timeStruct, int motionState); //return 1 or 0 if buzzer should be on/off for this alarm
@@ -23,3 +24,4 @@ class Alarm{
 		int alarmTime; //minutes since midnight alarm will start
 		std::string schedule; //represents either days to go off or a single date
 };
+#endif
