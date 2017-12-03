@@ -5,6 +5,10 @@
 #include <unistd.h>
 #include <ugpio/ugpio.h>
 
+#include "UserInfo.hpp"
+#include "AlarmList.hpp"
+#include "Log.hpp"
+
 using namespace std;
 
 const string statFileName = "stats.txt";
@@ -19,89 +23,6 @@ int log(const string message, const string severity);
 int checkRange(const string setting, const char lower, const char higher);
 int gpioSetup(const int pinNum, int &rq, const int pinMode);
 int gpioRelease(const int pinNum, int &rq);
-
-//class declarations
-class UserInfo {
-	public:
-		const string filename = "userInfo.txt";
-		UserInfo();	//declare constructor
-		
-		//declare functions
-		bool fileNotExist();
-		string getName();
-		string getEmail();
-		void writeInfo();
-		void readInfo();
-		
-	private:
-		//declare private variables
-		string name;
-		string email;
-		
-		//error check methods do not require an instance of a class
-		string capitalize(string name);
-		static int checkName(const string input);
-		static int checkEmail(const string input);
-};
-class Alarm{
-	public:
-		int tick(tm* timeStruct, int motionState); //return 1 or 0 if buzzer should be on/off for this alarm
-		Alarm();
-		void setAlarmName(const string name);
-		void setAlarmTime(const int aTime);
-		void setAlarmSchedule(const string sched);
-				
-		string getAlarmName();
-		int getAlarmTime();
-		string getAlarmSchedule();
-		string printAlarm();
-		
-		string displayAlarm();
-	private:
-		tm* timeFreeze;//holds all information at the time of alarm start
-		bool ongoing; //on if the buzzer should be on
-
-		bool oneTime; //if it is a onetime alarm or a recurring alarm
-		string alarmName; 
-		int alarmTime; //minutes since midnight alarm will start
-		string schedule; //represents either days to go off or a single date
-};
-class AlarmList{
-	public:
-
-		const int EXIT_PIN = 0;
-		const int TRIGGER_PIN = 1;
-		const int BUZZER_PIN = 11;	
-
-		
-		const string filename = "alarms.txt";
-		AlarmList();
-		int runAlarm();
-		int addAlarm();
-		int delAlarm();
-		int readList();
-		int writeList();
-		int displayList();
-		
-	private:
-		Alarm* alarms;
-		int length;
-		
-		static bool isLeapYear(const int year);
-		static int checkName(const string name);
-		static int checkAlarm(const string alarm);
-		static int checkDate(const string date, const string alarm);
-		static int checkYesOrNo(const string yn);
-		static string setAlarmSetting(const int option, const string alarm);
-};
-class Log {
-	public:
-		Log();
-		void log(string, string);
-		
-	private:
-		string filename;
-};
 
 //UserInfo member function definitions
 UserInfo::UserInfo(){ //constructor
@@ -518,15 +439,16 @@ int AlarmList::runAlarm(){
 		sleep(sleepTime);
 		cout << "\tCurrent time: " << (ltm->tm_hour) << ":" << (ltm->tm_min) << ":" << (ltm->tm_sec) << endl;
 		
-		exitVal = gpio_get_value(EXIT_PIN)
+		exitVal = gpio_get_value(EXIT_PIN);
 		triggerVal = gpio_get_value(TRIGGER_PIN);
 		
 		
-		if(exitVal)
+		if (exitVal) {
 			exitButtonHit = true;
+		}
 		
 		for (int i = 0; i < length; i++){
-			buzzerSum += alarms[i].tick(ltm, triggerVal) //read motionstate
+			buzzerSum += alarms[i].tick(ltm, triggerVal); //read motionstate
 		}
 		
 		//if (buzzerSum){
@@ -983,7 +905,7 @@ int AlarmList::checkYesOrNo(const string yn){//error checks yes or no input
 }
 
 //Log member function declarations
-void Log::Log(){
+Log::Log(){
 	//initialize time and set to local
 	time_t now = time(0);
 	tm* ltm = localtime(&now);
@@ -1109,50 +1031,6 @@ int log(const string severity, const string message) {
 	logfile.close();
 	
 	return 0;
-}
-int gpioSetup(const int pinNum, int &rq, const int pinMode) {
-	int rv;
-	// check if gpio is already exported
-	if ((rq = gpio_is_requested(pinNum)) < 0) {
-		cerr << "Error: GPIO pin " << pinNum << " is already in use."
-			<< endl;
-		return -1;
-	}
-	// export the gpio
-	if (!rq) {
-		if ((rv = gpio_request(pinNum, NULL)) < 0) {
-			cerr << "Error: GPIO pin " << pinNum <<
-				" could not be exported." << endl;
-			return -1;
-		}
-	}
-	// set to input direction
-	if (pinMode == 0) {
-		if ((rv = gpio_direction_input(pinNum)) < 0) {
-			cerr << "Error: GPIO pin " << pinNum <<
-				" could not be set as input." << endl;
-			return -1;
-		}
-	} else {
-		if ((rv = gpio_direction_output(pinNum, 0)) < 0) {
-			cerr << "Error: GPIO pin " << pinNum <<
-			       "could not be set as output." << endl;
-			return -1;
-		}
-	}
-	return 0;
-}
-
-int gpioRelease(const int pinNum, int &rq) {
-	if (!rq) {
-		if (gpio_free(pinNum) < 0) {
-			cerr << "Error: Could not free GPIO pin " << pinNum <<
-				endl;
-			return -1;
-		}
-		return 0;
-	}
-	return 1;
 }
 
 int main(){
