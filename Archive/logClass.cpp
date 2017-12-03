@@ -12,15 +12,10 @@ class Log {
 		
 	private:
 		string filename;
-		string message;
-		string severity;
 };
 
 Log::Log() {
-	//initially set strings to empty strings
-	message = "";
-	severity = "";
-	-
+
 	//initialize time and set to local
 	time_t now = time(0);
 	tm* ltm = localtime(&now);
@@ -42,13 +37,11 @@ void Log::log(string a, string b) {
 	time_t now = time(0);
 	tm* ltm = localtime(&now);
 	
-	//set message and severity to be written
-	message = a;
-	severity = b;
-	
+
+
 	//write data ato log
 	logfile << (ltm->tm_year + 1900) << "-" << (ltm->tm_mon + 1) << "-" << ltm->tm_mday << "\t" 
-			<< ltm->tm_hour << ":" << ltm->tm_min << ":" << ltm->tm_sec << "\t\t(" << severity << "):\t " << message << "\r\n";
+			<< ltm->tm_hour << ":" << ltm->tm_min << ":" << ltm->tm_sec << "\t(" << a << "):\t " << b << "\r\n";
 	logfile.close();
 }
 
