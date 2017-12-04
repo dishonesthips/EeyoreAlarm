@@ -10,7 +10,7 @@ all: $(TARGET1)
 
 $(TARGET1): 
 	@echo "Compiling C program"
-	$(CXX) $(CFLAGS) $(TARGET1).cpp $(TARGET2).cpp $(TARGET3).cpp $(TARGET4).cpp -o $(TARGET1) $(LDFLAGS) -l$(LIB) -std=c++11
+	$(CXX) $(CFLAGS) $(TARGET1).cpp -o $(TARGET1) $(LDFLAGS) -l$(LIB) -std=c++11
 
 clean:
 	@rm -rf $(TARGET1)
