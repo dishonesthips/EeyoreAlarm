@@ -46,8 +46,8 @@ class UserInfo {
 		
 		//declare functions
 		bool fileNotExist();
-		string getName();
-		string getEmail();
+		string getName() const;
+		string getEmail() const;
 		void writeInfo();
 		void readInfo();
 		static void setLogger(Log log);
@@ -189,7 +189,6 @@ class ReadStatList {
 	private:
 		ReadStat* stats[10];
 };
-
 
 //Log member function declarations
 Log::Log(){//constructor opens log file named with the time that the program was run
@@ -481,10 +480,10 @@ string UserInfo::capitalize(string name){//capitalize name for format
 	
 	logger.log("INFO", "Name was formatted successfully");
 }
-string UserInfo::getName(){ //getter name
+string UserInfo::getName() const { //getter name
 	return name;
 }
-string UserInfo::getEmail(){//getter email
+string UserInfo::getEmail() const {//getter email
 	return email;
 }
 void UserInfo::setLogger(Log log){//assigns static logger member
