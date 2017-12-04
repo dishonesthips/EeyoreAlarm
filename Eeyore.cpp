@@ -2,8 +2,10 @@
 #include <string>
 #include <fstream>
 #include <math.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <ugpio/ugpio.h>
+#include <iomanip>
 
 using namespace std;
 
@@ -16,6 +18,26 @@ class Log {
 		
 	private:
 		string filename;
+};
+class Mailer {
+	public:
+		Mailer(string name, string email);
+		int sendStats(const std::string statFile);
+		int sendTimeout(const std::string alarmName, int timeoutLength);
+		void updateInfo(string name, string email);
+		
+		static Log logger;
+		static void setLogger(Log log);
+
+
+	private:
+		string userName;
+		string userAddress;
+		std::string sourceAddress;
+		std::string smtpServer;
+		std::string password;
+		std::string supportAddress;
+		int sendMail(const std::string subject, const std::string bodyFile);
 };
 class UserInfo {
 	public:
@@ -47,12 +69,12 @@ class UserInfo {
 class Alarm{
 	public:
 		static const int maxSecondsPlaying = 60;
-		
+		static Log logger;
+		static Mailer outMail;
+
 		Alarm();
 		void resetAlarm();		
 		static void setLogger(Log log);
-		static Log logger;
-
 
 		int tick(tm* timeStruct, int motionState); //return 1 or 0 if buzzer should be on/off for this alarm
 		
@@ -83,6 +105,8 @@ class Alarm{
 class AlarmList{
 	public:
 		static int checkRange(const string setting, const int lower, const int higher);
+		static int checkYesOrNo(const string yn);
+		static void setLogger(Log log);
 
 	
 		const int EXIT_PIN = 0;
@@ -100,8 +124,7 @@ class AlarmList{
 		int writeList();
 		int displayList();
 		static Log logger;
-
-		static void setLogger(Log log);
+		
 
 	private:
 		Alarm* alarms;
@@ -112,7 +135,6 @@ class AlarmList{
 		static int checkName(const string name);
 		static int checkAlarm(const string alarm);
 		static int checkDate(const string date, const string alarm);
-		static int checkYesOrNo(const string yn);
 		static string setAlarmSetting(const int option, const string alarm);
 		
 		int gpioSetup(const int pinNum, int &rq, const int pinMode);
@@ -192,9 +214,85 @@ void Log::log(string severity, string message){ //logs a given message
 	tm* ltm = localtime(&now);
 	
 	//write data to log
-	logfile << (ltm->tm_year + 1900) << "-" << (ltm->tm_mon + 1) << "-" << ltm->tm_mday << "\t" 
-			<< ltm->tm_hour << ":" << ltm->tm_min << ":" << ltm->tm_sec << "\t(" << severity << "):\t " << message << "\r\n";
+	logfile << (ltm->tm_year + 1900) << "-" 
+            << setfill('0') << setw(2) << (ltm->tm_mon + 1) << "-" 
+            << setfill('0') << setw(2) << ltm->tm_mday << "\t" 
+            << setfill('0') << setw(2) << ltm->tm_hour << ":" 
+            << setfill('0') << setw(2) << ltm->tm_min << ":" 
+            << setfill('0') << setw(2) << ltm->tm_sec << "\t(" 
+            << severity << "):\t " 
+            << message << "\r\n";
 	logfile.close();
+}
+//Mailer member functions
+
+Log Mailer::logger;
+Mailer::Mailer(string user, string email) {//sets user details and logger
+	userName = user;
+	userAddress = email;
+	sourceAddress = "eeyorealarm@gmail.com";
+	smtpServer = "smtp.gmail.com";
+	password = "onioneer";
+	supportAddress = "adkarapo@edu.uwaterloo.ca";
+}
+int Mailer::sendStats(const string statFile) {//sends a statistics email
+
+	//set subject
+	string subject = "Your Eeyore Statistics";
+	//body is already stored in file
+	return sendMail(subject, statFile);
+}
+int Mailer::sendTimeout(const string alarmName, int timeoutLength) {//sends a warning email
+	string subject = "Timeout for alarm \"" + alarmName+"\"";
+	string timeStr = to_string(timeoutLength);
+	//save message body to file
+	ofstream body;
+	string filename = "timeout-mail";
+	body.open(filename);
+	body << "Hello, " << userName << "!" << endl << endl <<
+		"This is just to let you know that your alarm " << alarmName <<
+		" has been running for " << timeoutLength <<
+		" seconds without being deactivated." << endl <<
+		"We've turned the alarm off for you, just in case you aren't "
+		<< "home. If you are home, you must be a really sound sleeper!"
+		<< endl << "If this happens again, you may want to consider "
+		<< "purchasing a more powerful alarm clock!" << endl << endl <<
+		"\t- Your Eeyore alarm" << endl;
+	body.close();
+	//send mail
+	int retVal = sendMail(subject, filename);
+	//delete mail file
+	if (remove(filename.c_str()) != 0) {
+		//error deleting email
+		logger.log("WARN", "Temporary email file could not be deleted");
+		if (retVal != 0) {
+			return retVal;
+		} else {
+			return -1;
+		}
+	}
+	return retVal;
+}
+int Mailer::sendMail(const string subject, const string bodyFile) {
+	//construct command string
+	cout << "\n\tSending...check the email: " << userAddress<< endl;
+
+	string command = "mailsend -to \"" + userAddress +
+		"\" -from \"" + sourceAddress + "\" -ssl -port 465 -auth-login " +
+		"-smtp " + smtpServer + " -sub \"" + subject + "\" +cc +bc " +
+		"-user " + sourceAddress + " -pass \"" + password + "\" " +
+		"-name \"Eeyore Alarm\" -rt " + supportAddress +
+		" -mime-type \"text/plain\" -msg-body \"" + bodyFile + "\" > /dev/null";
+	//send mail
+	logger.log("INFO","Sent email.");
+	return system(command.c_str());
+}
+void Mailer::setLogger(Log log) {//logger
+	Mailer::logger = log;
+}
+void Mailer::updateInfo(string name, string email){
+	userName = name;
+	userAddress = email;
 }
 
 
@@ -395,6 +493,7 @@ void UserInfo::setLogger(Log log){//assigns static logger member
 
 //Alarm member  definitions
 Log Alarm::logger;
+Mailer Alarm::outMail("temp","temp");
 Alarm::Alarm(){//constructor
 	alarmTime = -1;
 	schedule = "";
@@ -421,11 +520,13 @@ int Alarm::tick(tm* timeStruct, int motionState){ //returns 1 if buzzer should b
 	
 	
 	//if the alarm is going off sometime today
-	
 	if (ongoing){//if it is currently going
 		int diff = difftime(mktime(timeStruct),mktime(&timeFreeze)); //returns difference in seconds between 2 time structs
 		cout<<"\tAlarm: \""<<alarmName<<"\" is currently active."<<endl;
 		if (diff >= maxSecondsPlaying || motionState){ //either the time is up or it has been deactivated
+			if (diff>=maxSecondsPlaying)
+				outMail.sendTimeout(alarmName, diff);//email the user saying that their alarm timed out
+			
 			cout<<"\tAlarm: \""<<alarmName<<"\" was deactivated in "<< diff<< " seconds.\n";
 			writeStat(timeFreeze.tm_wday, diff); //write how long it was on to a stats file
 			resetAlarm();
@@ -436,15 +537,17 @@ int Alarm::tick(tm* timeStruct, int motionState){ //returns 1 if buzzer should b
 		return 1;
 	}
 	else{//if it is not currently going
+
 		int currMin = (timeStruct->tm_hour)*60 + timeStruct->tm_min;
-		if (currMin == alarmTime && timeStruct->tm_sec==0){//time to go off is now
+
+		if (currMin == alarmTime && timeStruct->tm_sec<=1){//<=1 because we have observed it skipping seconds on rare occasions
 			ongoing = true;
 			timeFreeze = *timeStruct;
 			logger.log("INFO","Alarm: \""+alarmName+"\" successfully activated.");
 			return 1;
 		}
 		return 0;
-	}	
+	}
 }
 string Alarm::printAlarm(){//Gives alarm in format to be used when writing to file
 	string s;
@@ -672,8 +775,10 @@ int AlarmList::runAlarm(){//runs in a loop handling the alarm system and alarms 
 		
 		sleep(sleepTime);
 		cout << "\tCurrent time: " << (ltm->tm_hour) << ":" << (ltm->tm_min) << ":" << (ltm->tm_sec) << endl;
-		if (ltm->tm_hour % 10 == 0)
+		
+		if (ltm->tm_hour % 10 == 0 && ltm->tm_min ==0 && ltm->tm_sec==0)//log every 10 minutes
 			logger.log("TRCE","Running alarm system");
+		
 		exitVal = gpio_get_value(EXIT_PIN);
 		triggerVal = gpio_get_value(TRIGGER_PIN);
 		
@@ -1321,7 +1426,7 @@ void ReadStat::histogram() {//calculate a histogram for dataset
 		else if (data[i] >= 300)
 			buckets[7]++;
 		else
-			buckets[((data[i] - 1) / 60) + 2]++;
+			buckets[(data[i] / 60) + 2]++;
 	}
 }
 bool ReadStat::fileExists() {//check if file exists
@@ -1406,7 +1511,6 @@ void ReadStat::writeStats(const string* printStats, const string title) {//write
 	else
 		writefile << printStats[0] << endl;
 	writefile.close();
-	logger.log("INFO", "Writing and printing stats success");
 }
 int ReadStat::getLength() {//get amount of data points
 	return length;
@@ -1497,6 +1601,7 @@ int ReadStatList::runStats() {//run stats
 	for (int i = 1; i < 10; i++) {
 		stats[i]->writeStats(stats[i]->getStats(), titles[i]);
 	}
+	logger.log("INFO", "Writing and printing stats success");
 	return 0;
 }
 void ReadStatList::setLogger(Log log){//logger
@@ -1510,16 +1615,14 @@ int main(const int argc, const char* const args[]){
 	AlarmList::setLogger(logger);
 	ReadStat::setLogger(logger);
 	ReadStatList::setLogger(logger);
-
+	Mailer::setLogger(logger);
 	
 	
 	UserInfo user= UserInfo();
 	AlarmList alarmList = AlarmList();
-
 	alarmList.readList();
-
 	ReadStatList stats = ReadStatList();
-
+	
 	
 	bool exit = false;
 	
@@ -1529,6 +1632,9 @@ int main(const int argc, const char* const args[]){
 		cout<<"\n\n";
 	}
 	user.readInfo();
+	
+	Mailer outMail = Mailer(user.getName(), user.getEmail());
+	Alarm::outMail = outMail;
 	//cout << user.getName() << " " << user.getEmail() << endl;
 	cout<<"\n\t_____________________________\n\n\n\n";
 
@@ -1575,11 +1681,19 @@ int main(const int argc, const char* const args[]){
 			cout<<"\n\tUpdating User Info-\n";
 			user.writeInfo();
 			user.readInfo();
+			outMail.updateInfo(user.getName(), user.getEmail());
 		}
 		else if(menuAnswer[0] == '6'){//View Statistics
 			stats.runStats();
-			cout<<"\n\tHit enter to continue... ";
+			cout<<"\n\tWould you like to be emailed a summary of these statistics? (Y/N): ";
 			getline(cin,menuAnswer);
+			while (AlarmList::checkYesOrNo(menuAnswer)) {
+				cout<<"\n\tPlease enter 'Y' or 'N': ";
+				getline(cin, menuAnswer);
+			}
+			if (menuAnswer.compare("Y")==0 || menuAnswer.compare("y")==0){
+				outMail.sendStats("Statistics Summary.stat");
+			}
 		}
 		else if(menuAnswer[0] == '7'){//Exit
 			logger.log("TRCE","Manual request to exit program");
