@@ -7,18 +7,18 @@ class Mailer {
 	
 		static Log logger;
 
-		Mailer(string name, string email);
+		Mailer(std::string name, std::string email);
 		static void setLogger(Log log);
 
 		int sendStats(const std::string statFile);
 		int sendTimeout(const std::string alarmName, int timeoutLength);
-		void updateInfo(string name, string email);
+		void updateInfo(std::string name, std::string email);
 		
 	private:
 		int sendMail(const std::string subject, const std::string bodyFile);
 
-		string userName;
-		string userAddress;
+		std::string userName;
+		std::string userAddress;
 		std::string sourceAddress;
 		std::string smtpServer;
 		std::string password;

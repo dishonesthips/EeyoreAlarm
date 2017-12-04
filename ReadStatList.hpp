@@ -2,7 +2,6 @@
 #define READSTATLIST
 #include "Log.hpp"
 #include "ReadStat.hpp"
-#include <string>
 
 
 class ReadStatList {
