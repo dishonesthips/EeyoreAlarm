@@ -112,7 +112,46 @@ class AlarmList{
 		
 		Log logger;
 };
-
+class ReadStat {
+	public:
+		ReadStat(const string);
+		void readData();
+		void specialDataLen(const int);
+		void specialData(const int, const int*);
+		void setMax();
+		void setMin();
+		void setMean();
+		void sort();
+		void setMedian();
+		void histogram();
+		bool fileExists();
+		string* getStats();
+		void displayStats();
+		void writeStats(const string*, const string);
+		int getLength();
+		int* getData();
+		const int bucketsLen = 8;
+		
+	private:
+		string filename;
+		int* data;
+		int length;
+		int max;
+		int min;
+		float mean;
+		int median;
+		int buckets[8];
+};
+class ReadStatList {
+	public:
+		ReadStatList(Log log);
+		int runStats();
+		const int length = 10;
+		const int lengthDays = 7;
+	private:
+		ReadStat* stats[10];
+		Log logger;
+};
 
 
 //Log member function declarations
@@ -146,7 +185,6 @@ void Log::log(string severity, string message){ //logs a given message
 
 //UserInfo member function definitions
 UserInfo::UserInfo(Log log){ //constructor
-
 	name = "";
 	email = "";
 	logger = log;
@@ -177,6 +215,8 @@ void UserInfo::writeInfo(){//write info to a file with paramters info
 	outfile.open(filename);
 	outfile << nameFile << "," << emailFile << "\r\n";
 	outfile.close();
+	
+	log.logger("INFO", "User info writing successful");
 }
 void UserInfo::readInfo(){//read info from a file and sets values of object UserInfo accordingly
 
@@ -204,6 +244,8 @@ void UserInfo::readInfo(){//read info from a file and sets values of object User
 		email += line[i];
 		i++;
 	}
+	
+	logger.log("INFO", "User name and email read successfully");
 }
 bool UserInfo::fileNotExist(){//check to see if text file already exists
 	ifstream infile;
@@ -218,24 +260,26 @@ bool UserInfo::fileNotExist(){//check to see if text file already exists
 int UserInfo::checkName(const string input){//static error check valid name
 	//check for empty string
 	if (input.empty()) {
-		cerr << "Error: Empty string!" << endl;
+		logger.log("WARN", "Given empty string for name, request try again");
 		return -2;
 	}
 	
 	//check for  (weird bug involving cin operator)
 	for (int i = 0; i < input.length(); i++) {
 		if (input[i] == '') {
-			cerr << "Don't use arrow keys!" << endl;
+			logger.log("WARN", "Given arrow key input for name, request try again");
 			return -2;
 		}
-	}	
+	}
+	
 	//valid name
+	logger.log("INFO", "Name is valid");
 	return 0;
 }
 int UserInfo::checkEmail(const string input){//static error check valid email
 	//check for empty string
 	if (input.empty()) {
-		cerr << "Error: Empty string!" << endl;
+		logger("WARN", "Given empty string for email, request try again");
 		return -3;
 	}
 	
@@ -243,14 +287,14 @@ int UserInfo::checkEmail(const string input){//static error check valid email
 
 	//error checking for email name validity
 	if (input[count] == '.') {
-		cerr << "Error: Invalid dot usage" << endl;
+		logger.log("WARN", "Given an email starting with '.', request try again");
 		return -3;	//email cannot begin with a '.'
 	}
 	
 	//check for  (weird bug involving cin operator)
 	for (int i = 0; i < input.length(); i++) {
 		if (input[i] == '') {
-			cerr << "Don't use arrow keys!" << endl;
+			logger.log("WARN", "Given arrow key input for email, request try again");
 			return -2;
 		}
 	}
@@ -259,7 +303,7 @@ int UserInfo::checkEmail(const string input){//static error check valid email
 	//the local-part of an email can only include certain characters; if invalid character, error
 	while (input[count] != '@') {
 		if (count == input.length()-1) {
-			cerr << "Error: Invalid email. Cannot find '@'" << endl;
+			logger.log("WARN", "Given an email without an '@', request try again");
 			return -3;
 		}
 		if ((input[count] != '!' && (input[count] < '#' || input[count] > 39) && 
@@ -267,11 +311,11 @@ int UserInfo::checkEmail(const string input){//static error check valid email
 		input[count] != '=' && input[count] != '?' && (input[count] < '^' || input[count] > '~') &&
 		(input[count] > '{' || input[count] < '~')) && (input[count] < 'A' || input[count] > 'Z') &&
 		(input[count] < '0' || input[count] > '9') && input[count]) {
-			cerr << "Error: Invalid character" << endl;
+			logger.log("WARN", "Given an email with an invalid character in it");
 			return -3;
 		}
 		if (input[count] == '.' && (input[count - 1] == '.' || input[count + 1] == '.')) {			//cannot have two dots in a row
-			cerr << "Error: Invalid dot usage" << endl;
+			logger.log("WARN", "Given an email with two dots in a row, request try again");
 			return -3;
 		}
 		count++;
@@ -283,7 +327,7 @@ int UserInfo::checkEmail(const string input){//static error check valid email
 	while (input[count] != '.') {
 		if (((input[count] < 'A' || input[count] > 'Z') && (input[count] < 'a' || input[count] > 'z') &&
 		(input[count] < '0' || input[count] > '9') && input[count] != '-')) {
-			cerr << "Error: Invalid character" << endl;
+			logger.log("WARN", "Given an email with an invalid character in it, request try again");
 			return -3;
 		}
 		count++;
@@ -293,17 +337,18 @@ int UserInfo::checkEmail(const string input){//static error check valid email
 	while (input[count]) {
 		if (((input[count] < 'A' || input[count] > 'Z') && (input[count] < 'a' || input[count] > 'z') &&
 		(input[count] < '0' || input[count] > '9') && input[count] != '-') && input[count] != '.') {
-			cerr << "Error: Invalid character" << endl;
+			logger.log("WARN", "Given an email with an invalid character in it, request try again");
 			return -3;
 		}
 		if (input[count] == '.' && (input[count - 1] == '.' || input[count + 1] == '.' || input[count + 1] == 0)) {
-			cerr << "Error: Invalid dot usage" << endl;
+			logger.log("WARN", "Given an email ending with a '.', request try again");
 			return -3;
 		}
 		count++;
 	}
 	
 	//valid email
+	logger.log("INFO", "Email is valid");
 	return 0;
 }
 string UserInfo::capitalize(string name){//capitalize name for format
@@ -320,6 +365,8 @@ string UserInfo::capitalize(string name){//capitalize name for format
 	}
 	//return capitalized name
 	return newName;
+	
+	log("INFO", "Name was formatted successfully");
 }
 string UserInfo::getName(){ //getter name
 	return name;
@@ -406,7 +453,7 @@ int Alarm::getAlarmTime(){ //getter time
 string Alarm::getAlarmSchedule(){ //getter schedule
 	return schedule;
 }
-string Alarm::getFormatTime(){
+string Alarm::getFormatTime(){ //getter time in a string format
 	string hour = to_string(alarmTime/60);
 	if (hour.length() == 1) {
 		hour = "0" + hour;
@@ -447,7 +494,7 @@ void Alarm::writeStat(int day, int time){
 	ofstream statfile;
 	string s = to_string(day);
 	statfile.open("stats" + s + ".txt", ios::app | ios::out);
-	statfile << time << "\r\n" << endl;
+	statfile << time << "\r\n";
 	statfile.close();
 }
 bool Alarm::getOneTime(){
@@ -472,7 +519,6 @@ AlarmList::AlarmList(Log log){
 	
 }
 int AlarmList::readList(){ //creates list of alarms from text file. only to be run once at start of program
-	
 	string line;
 	length = 0;
 	
@@ -480,11 +526,13 @@ int AlarmList::readList(){ //creates list of alarms from text file. only to be r
 	ifstream infile;            // declare the file object
 	infile.open(filename);      // open the file
 	
+	//check the file exists
 	if (!infile.is_open()){
-		cerr<<"cant find alarm file oh no"<<endl;
+		logger.log("WARN", "Cannot find alarm file, will be written later");
 		return -1;
 	}
 	
+	//find length of the array = num of alarms
 	while(!infile.eof()){
 		getline(infile,line);
 		if(!line.empty() && line.compare("\r")!=0)
@@ -492,39 +540,40 @@ int AlarmList::readList(){ //creates list of alarms from text file. only to be r
 	}
 	infile.close();
 	
-	
-
+	//create a new pointer for alarms
 	Alarm* tmp = alarms;
 	alarms = new Alarm[length];
 	delete tmp;
 	
-
-	ifstream infileR;            // declare the file object
-	infileR.open(filename);      // open the file
-
-	if (!infileR.is_open()){
-		cerr<<"cant find alarm file oh no"<<endl;
-		return -1;
-	}
+	//open the file again, this time to be read
+	ifstream infileR;
+	infileR.open(filename);
 	
-	
+	//declare counting variables
+	string aName;
+	string aTimeStr;
+	string aSched;
 	int index = 0;
 	int charIndex;
+	
+	//get data from file
 	while(!infileR.eof()){
 		getline(infileR,line);
 		if(!line.empty() && line.compare("\r")!=0){
-			string aName = "";
-			string aTimeStr="";
-			string aSched="";
-			//cout<<index<<endl;
-			//AlarmList::assignData(line,alarms[index++]);
+			//reset all counting variables
+			aName = "";
+			aTimeStr = "";
+			aSched = "";
 			charIndex = 0;
+			
+			//append to name
 			while (line[charIndex] != ',') {
 				aName+= line[charIndex];
 				charIndex++;
 			}
 			charIndex++;
 			
+			//append to time string, then convert to int
 			while (line[charIndex] != ',') {
 				aTimeStr += line[charIndex];
 				charIndex++;
@@ -532,29 +581,30 @@ int AlarmList::readList(){ //creates list of alarms from text file. only to be r
 			int aTime = stoi(aTimeStr);
 			charIndex++;
 			
+			//append to schedule
 			while (line[charIndex]) {
 				aSched += line[charIndex];
 				charIndex++;
 			}
 			charIndex++;
-			//cout<<aName<<" "<<aTime<<" "<<aSched<<endl;
+			
+			//set alarm variables
 			alarms[index].setAlarmName(aName);
 			alarms[index].setAlarmTime(aTime);
 			alarms[index].setAlarmSchedule(aSched);
 			
+			//increment index to go to next alarm
 			index++;
 		}
-		
-
 	}
 	infileR.close();
+	
 	return 0;
-
 }
 int AlarmList::writeList(){ //appends an alarm to the file of alarms
-	
-	
+	//only write if there are alarms to be written
 	if (length > 0) {
+		//open the file and write the variables to a line, separated by comma, for the first 
 		ofstream alarmFirst;
 		alarmFirst.open(filename);
 		alarmFirst << alarms[0].getAlarmName() << "," << alarms[0].getAlarmTime() << "," << alarms[0].getAlarmSchedule() << "\r\n";
@@ -568,6 +618,10 @@ int AlarmList::writeList(){ //appends an alarm to the file of alarms
 				alarmFile << alarms[i].printAlarm()<< "\r\n";
 			alarmFile.close();
 		}
+	}
+	else {
+		log.logger("WARN", "Prompted to write file, no alarms to write");
+		return -1;
 	}
 	
 	return 0;
@@ -620,7 +674,7 @@ int AlarmList::runAlarm(){
 		if (buzzerSum){
 			gpio_set_value(BUZZER_PIN, 1);
 		}
-		else
+		else	
 			gpio_set_value(BUZZER_PIN, 0);
 		
 		
@@ -941,66 +995,17 @@ int AlarmList::checkDate(const string date, const string alarm){
 		return -5;
 	}
 	
-	//declare counters
-	int numDayDigits = 0;
-	int numMonthDigits = 0;
-	int numYearDigits = 0;
-	bool isDay = true;
-	bool isMonth = false;
-	bool isYear = false;
-	
+	//check for format
+	if (date.length() != 10 || date[2] != '/' || date[5] > '/') {
+		cerr << "Error: Check your format" << endl;
+		return -5;
+	}
 	for (int i = 0; i < date.length(); i++) {
-		//check for arrow keys
-		if (date[i] == '') {
-			cerr << "Don't use arrow keys!" << endl;
+		if ((date[i] < '0' || date[i] > '9') && date[i] != '/') {
+			cerr << "Error: Numbers and slashes only" << endl;
 			return -5;
 		}
-		
-		//check for format
-		if ((date[i] < '0' || date[i] > '9') && date[i] != '/' && date[i] != 0) {
-			cerr << "Error: Check your format" << endl;
-			return -5;
-		}
-		
-		//switch states of day, month, year according to position of i in the string date
-		if (date[i] == '/') {
-			if (isDay) {
-				isDay = false;
-				isMonth = true;
-			}
-			else {
-				isMonth = false;
-				isYear = true;
-			}
-		}
-		else {
-			//increment day/month/year counts
-			if (isDay)
-				numDayDigits++;
-			else if (isMonth)
-				numMonthDigits++;
-			else
-				numYearDigits++;
-		}
 	}
-	
-	//check for correct amount of day/month/year digits
-	if (numDayDigits != 2) {
-		cerr << "Error: Invalid day" << endl;
-		return -5;
-	}
-	if (numMonthDigits != 2) {
-		cerr << "Error: Invalid month" << endl;
-		return -5;
-	}
-	if (numYearDigits != 4) {
-		cerr << "Error: Invalid year" << endl;
-		return -5;
-	}
-	
-	//initialize time and set to local to compare dates
-	time_t now = time(0);
-	tm* ltm = localtime(&now);
 	
 	//declare day, month, year, hour, minute ints
 	const int day = stoi(date.substr(0,2));
@@ -1008,28 +1013,6 @@ int AlarmList::checkDate(const string date, const string alarm){
 	const int year = stoi(date.substr(6,4));
 	const int hour = stoi(alarm.substr(0,2));
 	const int minute = stoi(alarm.substr(3,2));
-	
-	//cannot choose a date from the past
-	if (year < (ltm->tm_year + 1900)) {
-		cerr << "Choose a year in the future!" << endl;
-		return -5;
-	}
-	if (month < (ltm->tm_mon + 1) && year == ltm->tm_year) {
-		cerr << "Choose a month in the future!" << endl;
-		return -5;
-	}
-	if (day < ltm->tm_mday && month == (ltm->tm_mon + 1)) {
-		cerr << "Choose a day in the future!" << endl;
-		return -5;
-	}
-	if (hour < ltm->tm_hour && day == ltm->tm_mday) {
-		cerr << "Choose a time in the future! (time)" << endl;
-		return -5;
-	}
-	if (minute < ltm->tm_min && hour == ltm->tm_hour) {
-		cerr << "Choose a time in the future! (time)" << endl;
-		return -5;
-	}
 	
 	//check for valid time and year
 	const int numMonths = 12;
@@ -1063,6 +1046,40 @@ int AlarmList::checkDate(const string date, const string alarm){
 		if (month == (i + 1) && day > daysInMonths[i]) {
 			cerr << "Invalid date" << endl;
 			return -5;
+		}
+	}
+	
+	//initialize time and set to local to compare dates
+	time_t now = time(0);
+	tm* ltm = localtime(&now);
+	
+	//cannot choose a date from the past
+	if (year < (ltm->tm_year + 1900)) {
+		cerr << "Choose a year in the future!" << endl;
+		return -5;
+	}
+	else if (year == (ltm->tm_year + 1900)) {
+		if (month < (ltm->tm_mon + 1)) {
+			cerr << "Choose a month in the future!" << endl;
+			return -5;
+		}
+		else if (month == (ltm->tm_mon + 1)) {
+			if (day < ltm->tm_mday) {
+				cerr << "Choose a day in the future!" << endl;
+				return -5;
+			}
+			else if (day == ltm->tm_mday) {
+				if (hour < ltm->tm_hour) {
+					cerr << "Choose a time in the future! (hour)" << endl;
+					return -5;
+				}
+				else if (hour == ltm->tm_hour) {
+					if (minute < ltm->tm_min) {
+						cerr << "Choose a time in the future! (min)" << endl;
+						return -5;
+					}
+				}
+			}
 		}
 	}
 	
@@ -1163,13 +1180,284 @@ int AlarmList::gpioRelease(const int pinNum, int &rq) {
 	return 1;
 }
 
+//Readstat member function declarations
+ReadStat::ReadStat(string nameOfFile) {
+	data = NULL;
+	length = 0;
+	filename = nameOfFile;
+	min = -1;
+	max = -1;
+	mean = -1;
+	median = -1;
+	for (int i = 0; i < bucketsLen; i++) {
+		buckets[i] = 0;
+	}
+}
+void ReadStat::readData() {
+	if (fileExists()) {
+		string line = "";
+		ifstream statfile;
+		statfile.open(filename);
+		length = 0;
+		while(!statfile.eof()){
+			getline(statfile, line);
+
+			if(!line.empty() && line.compare("\r")!= 0)
+				length++;
+		}
+		line = "";
+
+		statfile.close();
+		ifstream statfileR;
+		statfileR.open(filename);
+		
+		int* tmp = data;
+		data = new int[length];
+		delete tmp;
+		
+		for (int i = 0; i < length; i++) {
+			getline(statfileR, line);
+			cout<<line<<" "<<stoi(line)<<endl;
+			data[i] = stoi(line);
+		}
+		
+		statfileR.close();
+	}
+	else {
+		//cout << "File does not exist -__-" << endl;
+	}
+}
+void ReadStat::specialDataLen(const int newLen) {
+	data = new int[newLen];
+	length = 0;
+}
+void ReadStat::specialData(const int newLen, const int* dataset) {
+	for (int i = length; i < newLen + length; i++) {
+		data[i] = dataset[i - length];
+	}
+	length += newLen;
+}
+void ReadStat::setMax() {
+	max = data[0];
+	for (int i = 0; i < length; i++) {
+		if (data[i] > max)
+			max = data[i];
+	}
+}
+void ReadStat::setMin() {
+	min = data[0];
+	
+	for (int i = 0; i < length; i++) {
+		if (data[i] < min)
+			min = data[i];
+	}
+}
+void ReadStat::setMean() {
+	mean = 0;
+	sort();
+	for (int i = 0; i < length; i++) {
+		mean += data[i];
+	}
+	mean /= length;
+}
+void ReadStat::sort() {
+	int temp;
+	for (int i = 0; i < length; i++) {
+		for (int j = 0; j < length - 1; j++) {
+			if (data[j + 1] > data[j]) {
+				temp = data[j];
+				data[j] = data[j + 1];
+				data[j + 1] = temp;
+			}
+		}
+	}
+}
+void ReadStat::setMedian() {
+	if (length % 2)
+		median = data[length / 2];
+	else
+		median = ((data[length / 2 - 1] + data[length / 2]) / 2);
+}
+void ReadStat::histogram() {
+	for (int i = 0; i < length; i++) {
+		if (data[i] < 10)
+			buckets[0]++;
+		else if (data[i] < 30)
+			buckets[1]++;
+		else if (data[i] >= 300)
+			buckets[7]++;
+		else
+			buckets[((data[i] - 1) / 60) + 2]++;
+	}
+}
+bool ReadStat::fileExists() {
+	ifstream statfile;
+	statfile.open(filename);
+	if(statfile.is_open()) {
+		statfile.close();
+		return true;	//file exists
+	}
+	statfile.close();
+	return false; //file does not exist (yet) :smirk:
+}
+string* ReadStat::getStats() {
+	string* printStats;
+	if (length > 0) {
+		int daysInWeek = 7;
+		string daysOfWeek[7];
+		
+		setMax();
+		setMin();
+		setMean();
+		setMedian();
+		histogram();
+		
+		printStats = new string[13];
+		printStats[0] = "Max: " + to_string(max) + "\r\n";
+		printStats[1] = "Min: " + to_string(min) + "\r\n";
+		printStats[2] = "Mean: " + to_string(mean) + "\r\n";
+		printStats[3] = "Median: " + to_string(median) + "\r\n\r\n";
+		printStats[4] = "Histogram:\r\n";
+		printStats[5] = "[0,9] sec: " + to_string(buckets[0]) + "\r\n";
+		printStats[6] = "[10,29] sec: " + to_string(buckets[1]) + "\r\n";
+		printStats[7] = "[30,59] sec: " + to_string(buckets[2])	 + "\r\n";
+		printStats[8] = "[1,2) min: " + to_string(buckets[3]) + "\r\n";
+		printStats[9] = "[2,3) min: " + to_string(buckets[4]) + "\r\n";
+		printStats[10] = "[3,4) min: " + to_string(buckets[5]) + "\r\n";
+		printStats[11] = "[4,5) min: " + to_string(buckets[6]) + "\r\n";
+		printStats[12] = "[5-10] min: " + to_string(buckets[7]) + "\r\n";						  
+	}
+	else {
+		printStats = new string[1];
+		printStats[0] = "No stats\r\n";
+	}
+	return printStats;
+}
+void ReadStat::displayStats() {
+	string* printStats = getStats();
+	if (length > 0) {
+		cout << endl << endl;
+		for (int i = 0; i < 13; i++) {
+			cout << "\t" << printStats[i];
+		}
+	}
+	else {
+		cout << "\t" << printStats[0];
+		
+	}
+	//delete printStats;
+}
+void ReadStat::writeStats(const string* printStats, const string title) {
+	ofstream writefile;
+	if (!title.compare("SUNDAY")) {
+		writefile.open("Statistics Summary.stat");
+		writefile << "STATISTICS SUMMARY\r\n__________________\r\n";
+	}
+	else
+		writefile.open("Statistics Summary.stat", ios::app | ios:: out);
+	
+	writefile << "\r\n" << title << ":\r\n";
+	if (length > 0) {
+		for (int i = 0; i < 13; i++) {
+			writefile << printStats[i] << endl;
+		}
+	}
+	else
+		writefile << printStats[0] << endl;
+	writefile.close();
+}
+int ReadStat::getLength() {
+	return length;
+}
+int* ReadStat::getData() {
+	return data;
+}
+
+//ReadStatList member functions
+ReadStatList::ReadStatList(Log log) {
+	string num = "";
+	//populate array of stats, 0-6 are normal, 7-9 are special
+	for (int i = 0; i < length; i++) {
+		num = to_string(i);
+		stats[i] = new ReadStat("stats" + num + ".txt");
+	}
+	logger = log;
+
+}
+int ReadStatList::runStats() {
+	//simple read for the days of the week stats
+	for (int i = 0; i < lengthDays; i++) {
+		stats[i]->readData();
+	}
+	
+	//unique reads for the special statistics
+	//first find the total length of the array
+	int tmpLen = 0;
+	for (int i = 1; i < lengthDays - 1; i++) {
+		tmpLen += stats[i]->getLength();
+	}
+	stats[7]->specialDataLen(tmpLen);
+	//then pass in the desired values to be summed
+	for (int i = 1; i < lengthDays - 1; i++) {
+		stats[7]->specialData(stats[i]->getLength(), stats[i]->getData());
+	}
+	tmpLen = 0;
+	//do this for all three special functions, but using the desired values
+	//i.e. weekday stats only use weekday values, weekend only weekend, total uses all
+	
+	tmpLen += stats[0]->getLength();
+	tmpLen += stats[lengthDays - 1]->getLength();
+	stats[8]->specialDataLen(tmpLen);
+	stats[8]->specialData(stats[0]->getLength(), stats[0]->getData());
+	stats[8]->specialData(stats[lengthDays - 1]->getLength(), stats[lengthDays - 1]->getData());
+	tmpLen = 0;
+	
+	for (int i = 0; i < lengthDays; i++) {
+		tmpLen += stats[i]->getLength();
+	}
+	stats[9]->specialDataLen(tmpLen);
+	for (int i = 0; i < lengthDays; i++) {
+		stats[9]->specialData(stats[i]->getLength(), stats[i]->getData());
+	}
+	
+	string titles[10] = {"SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "WEEKDAYS", "WEEKENDS", "TOTAL"};
+	cout << "\n\n\tList of Statistics " << endl <<
+			"\t1. Sunday" << endl <<
+			"\t2. Monday" << endl <<
+			"\t3. Tuesday" << endl <<
+			"\t4. Wednesday" << endl <<
+			"\t5. Thursday" << endl <<
+			"\t6. Friday" << endl <<
+			"\t7. Saturday" << endl <<
+			"\t8. Weekdays" << endl <<
+			"\t9. Weekends" << endl <<
+			"\t10. Total" << endl <<
+			"\tWhich statistic would you like to view? (1-10): ";
+	string statNum;
+	getline(cin, statNum);
+	while (AlarmList::checkRange(statNum, 1, length)) {
+		cout << "\tPlease enter a single digit in range [1,10]: ";
+		getline(cin, statNum);
+	}
+	
+	stats[stoi(statNum) - 1]->displayStats();
+	
+	stats[0]->writeStats(stats[0]->getStats(), titles[0]);
+	for (int i = 1; i < 10; i++) {
+		stats[i]->writeStats(stats[i]->getStats(), titles[i]);
+	}
+	return 0;
+}
 
 int main(const int argc, const char* const args[]){
 	Log logger;
-
 	UserInfo user= UserInfo(logger);
 	AlarmList alarmList = AlarmList(logger);
 	alarmList.readList();
+	cout<<"allgood"<<endl;
+
+	ReadStatList stats = ReadStatList(logger);
+	cout<<"allgood"<<endl;
 
 	
 	bool exit = false;
@@ -1228,7 +1516,9 @@ int main(const int argc, const char* const args[]){
 			user.readInfo();
 		}
 		else if(menuAnswer[0] == '6'){//View Statistics
-			
+			stats.runStats();
+			cout<<"\n\tHit enter to continue... ";
+			getline(cin,menuAnswer);
 		}
 		else if(menuAnswer[0] == '7'){//Exit
 			logger.log("TRACE","Manual request to exit program");
