@@ -4,6 +4,7 @@
 #include "UserInfo.hpp"
 #include "Alarm.hpp"
 #include "AlarmList.hpp"
+#include "Mailer.hpp"
 
 using namespace std;
 
