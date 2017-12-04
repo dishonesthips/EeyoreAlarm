@@ -4,13 +4,36 @@
 #include <fstream>
 
 using namespace std;
+Log UserInfo::logger;
 
-//UserInfo member function definitions
-UserInfo::UserInfo(){ //constructor
 
+UserInfo::UserInfo(){//constructor
 	name = "";
 	email = "";
 }
+
+
+void UserInfo::setLogger(Log log){//assigns static logger member
+	UserInfo::logger = log;
+}
+
+bool UserInfo::fileNotExist(){//check to see if text file already exists
+	ifstream infile;
+	infile.open(filename);
+	if(infile.is_open()) {
+		infile.close();
+		return false;	//file exists
+	}
+	infile.close();
+	return true; //file does not exist (yet) :smirk:
+}
+string UserInfo::getName(){ //getter name
+	return name;
+}
+string UserInfo::getEmail(){//getter email
+	return email;
+}
+
 void UserInfo::writeInfo(){//write info to a file with paramters info
 	//declare strings to be written to file
 	string nameFile;
@@ -37,6 +60,8 @@ void UserInfo::writeInfo(){//write info to a file with paramters info
 	outfile.open(filename);
 	outfile << nameFile << "," << emailFile << "\r\n";
 	outfile.close();
+	
+	logger.log("INFO", "User info writing successful");
 }
 void UserInfo::readInfo(){//read info from a file and sets values of object UserInfo accordingly
 
@@ -64,68 +89,49 @@ void UserInfo::readInfo(){//read info from a file and sets values of object User
 		email += line[i];
 		i++;
 	}
+	
+	logger.log("INFO", "User name and email read successfully");
 }
-bool UserInfo::fileNotExist(){//check to see if text file already exists
-	ifstream infile;
-	infile.open(filename);
-	if(infile.is_open()) {
-		infile.close();
-		return false;	//file exists
-	}
-	infile.close();
-	return true; //file does not exist (yet) :smirk:
-}
+
+
 int UserInfo::checkName(const string input){//static error check valid name
 	//check for empty string
 	if (input.empty()) {
-		cerr << "Error: Empty string!" << endl;
+		logger.log("WARN", "Given empty string for name, request try again");
 		return -2;
 	}
-	/*
-	//test print name COMMENT OUT OF FINAL COPY
-	cout << "Recieved name: ";
-	for (int i = 0; i < input.length(); i++) {
-		cout << input[i] << " ";
-	}
-	cout << endl;
-	*/
+	
 	//check for  (weird bug involving cin operator)
 	for (int i = 0; i < input.length(); i++) {
 		if (input[i] == '') {
-			cerr << "Don't use arrow keys!" << endl;
+			logger.log("WARN", "Given arrow key input for name, request try again");
 			return -2;
 		}
 	}
 	
 	//valid name
+	logger.log("INFO", "Name is valid");
 	return 0;
 }
 int UserInfo::checkEmail(const string input){//static error check valid email
 	//check for empty string
 	if (input.empty()) {
-		cerr << "Error: Empty string!" << endl;
+		logger.log("WARN", "Given empty string for email, request try again");
 		return -3;
 	}
 	
 	int count = 0;
-	/*
-	//test print email COMMENT OUT OF FINAL COPY
-	cout << "Recieved email: ";
-	for (int i = 0; i < input.length() + 1; i++) {
-		cout << input[i] << " ";
-	}
-	cout << endl;
-	*/
+
 	//error checking for email name validity
 	if (input[count] == '.') {
-		cerr << "Error: Invalid dot usage" << endl;
+		logger.log("WARN", "Given an email starting with '.', request try again");
 		return -3;	//email cannot begin with a '.'
 	}
 	
 	//check for  (weird bug involving cin operator)
 	for (int i = 0; i < input.length(); i++) {
 		if (input[i] == '') {
-			cerr << "Don't use arrow keys!" << endl;
+			logger.log("WARN", "Given arrow key input for email, request try again");
 			return -2;
 		}
 	}
@@ -133,8 +139,8 @@ int UserInfo::checkEmail(const string input){//static error check valid email
 	//first find an '@'; if cannot find within length of email characters, error
 	//the local-part of an email can only include certain characters; if invalid character, error
 	while (input[count] != '@') {
-		if (count > input.length()) {
-			cerr << "Error: Invalid email. Cannot find '@'" << endl;
+		if (count == input.length()-1) {
+			logger.log("WARN", "Given an email without an '@', request try again");
 			return -3;
 		}
 		if ((input[count] != '!' && (input[count] < '#' || input[count] > 39) && 
@@ -142,11 +148,11 @@ int UserInfo::checkEmail(const string input){//static error check valid email
 		input[count] != '=' && input[count] != '?' && (input[count] < '^' || input[count] > '~') &&
 		(input[count] > '{' || input[count] < '~')) && (input[count] < 'A' || input[count] > 'Z') &&
 		(input[count] < '0' || input[count] > '9') && input[count]) {
-			cerr << "Error: Invalid character" << endl;
+			logger.log("WARN", "Given an email with an invalid character in it");
 			return -3;
 		}
 		if (input[count] == '.' && (input[count - 1] == '.' || input[count + 1] == '.')) {			//cannot have two dots in a row
-			cerr << "Error: Invalid dot usage" << endl;
+			logger.log("WARN", "Given an email with two dots in a row, request try again");
 			return -3;
 		}
 		count++;
@@ -158,7 +164,7 @@ int UserInfo::checkEmail(const string input){//static error check valid email
 	while (input[count] != '.') {
 		if (((input[count] < 'A' || input[count] > 'Z') && (input[count] < 'a' || input[count] > 'z') &&
 		(input[count] < '0' || input[count] > '9') && input[count] != '-')) {
-			cerr << "Error: Invalid character" << endl;
+			logger.log("WARN", "Given an email with an invalid character in it, request try again");
 			return -3;
 		}
 		count++;
@@ -168,17 +174,18 @@ int UserInfo::checkEmail(const string input){//static error check valid email
 	while (input[count]) {
 		if (((input[count] < 'A' || input[count] > 'Z') && (input[count] < 'a' || input[count] > 'z') &&
 		(input[count] < '0' || input[count] > '9') && input[count] != '-') && input[count] != '.') {
-			cerr << "Error: Invalid character" << endl;
+			logger.log("WARN", "Given an email with an invalid character in it, request try again");
 			return -3;
 		}
 		if (input[count] == '.' && (input[count - 1] == '.' || input[count + 1] == '.' || input[count + 1] == 0)) {
-			cerr << "Error: Invalid dot usage" << endl;
+			logger.log("WARN", "Given an email ending with a '.', request try again");
 			return -3;
 		}
 		count++;
 	}
 	
 	//valid email
+	logger.log("INFO", "Email is valid");
 	return 0;
 }
 string UserInfo::capitalize(string name){//capitalize name for format
@@ -195,10 +202,6 @@ string UserInfo::capitalize(string name){//capitalize name for format
 	}
 	//return capitalized name
 	return newName;
-}
-string UserInfo::getName(){ //getter name
-	return name;
-}
-string UserInfo::getEmail(){//getter email
-	return email;
+	
+	logger.log("INFO", "Name was formatted successfully");
 }

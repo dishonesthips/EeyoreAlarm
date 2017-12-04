@@ -1,12 +1,14 @@
 #include "Mailer.hpp"
+#include "Log.hpp"
 #include <string>
 #include <fstream>
 #include <iostream>
 
 using namespace std;
 
-//sets user details and logger
-Mailer::Mailer(string user, string email, Log log) {
+Log Mailer::logger;
+
+Mailer::Mailer(string user, string email) {//sets user details and logger
 	userName = user;
 	userAddress = email;
 	sourceAddress = "eeyorealarm@gmail.com";
@@ -15,17 +17,21 @@ Mailer::Mailer(string user, string email, Log log) {
 	supportAddress = "adkarapo@edu.uwaterloo.ca";
 }
 
-//sends a statistics email
-int Mailer::sendStats(const string statFile) {
+
+void Mailer::setLogger(Log log) {//logger
+	Mailer::logger = log;
+}
+
+
+int Mailer::sendStats(const string statFile) {//sends a statistics email
+
 	//set subject
-	string subject = "Your Eeyore statistics";
+	string subject = "Your Eeyore Statistics";
 	//body is already stored in file
 	return sendMail(subject, statFile);
 }
-
-//sends a warning email
-int Mailer::sendTimeout(const string alarmName, int timeoutLength) {
-	string subject = "Timeout for alarm " + alarmName;
+int Mailer::sendTimeout(const string alarmName, int timeoutLength) {//sends a warning email
+	string subject = "Timeout for alarm \"" + alarmName+"\"";
 	string timeStr = to_string(timeoutLength);
 	//save message body to file
 	ofstream body;
@@ -34,7 +40,7 @@ int Mailer::sendTimeout(const string alarmName, int timeoutLength) {
 	body << "Hello, " << userName << "!" << endl << endl <<
 		"This is just to let you know that your alarm " << alarmName <<
 		" has been running for " << timeoutLength <<
-		" without being deactivated." << endl <<
+		" seconds without being deactivated." << endl <<
 		"We've turned the alarm off for you, just in case you aren't "
 		<< "home. If you are home, you must be a really sound sleeper!"
 		<< endl << "If this happens again, you may want to consider "
@@ -55,18 +61,23 @@ int Mailer::sendTimeout(const string alarmName, int timeoutLength) {
 	}
 	return retVal;
 }
+void Mailer::updateInfo(string name, string email){
+	userName = name;
+	userAddress = email;
+}
+
 
 int Mailer::sendMail(const string subject, const string bodyFile) {
 	//construct command string
-	cout << "User mail: " << userAddress << endl;
+	cout << "\n\tSending...check the email: " << userAddress << " soon."<< endl;
+
 	string command = "mailsend -to \"" + userAddress +
 		"\" -from \"" + sourceAddress + "\" -ssl -port 465 -auth-login " +
 		"-smtp " + smtpServer + " -sub \"" + subject + "\" +cc +bc " +
 		"-user " + sourceAddress + " -pass \"" + password + "\" " +
 		"-name \"Eeyore Alarm\" -rt " + supportAddress +
-		" -mime-type \"text/plain\" -msg-body \"" + bodyFile + "\"";
+		" -mime-type \"text/plain\" -msg-body \"" + bodyFile + "\" > /dev/null";
 	//send mail
-	cout << command << endl;
+	logger.log("INFO","Sent email.");
 	return system(command.c_str());
 }
-

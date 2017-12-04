@@ -46,8 +46,8 @@ class UserInfo {
 		
 		//declare functions
 		bool fileNotExist();
-		string getName() const;
-		string getEmail() const;
+		string getName();
+		string getEmail();
 		void writeInfo();
 		void readInfo();
 		static void setLogger(Log log);
@@ -190,6 +190,7 @@ class ReadStatList {
 		ReadStat* stats[10];
 };
 
+
 //Log member function declarations
 Log::Log(){//constructor opens log file named with the time that the program was run
 	//initialize time and set to local
@@ -274,7 +275,7 @@ int Mailer::sendTimeout(const string alarmName, int timeoutLength) {//sends a wa
 }
 int Mailer::sendMail(const string subject, const string bodyFile) {
 	//construct command string
-	cout << "\n\tSending...check the email: " << userAddress<< endl;
+	cout << "\n\tSending...check the email: " << userAddress << " soon."<< endl;
 
 	string command = "mailsend -to \"" + userAddress +
 		"\" -from \"" + sourceAddress + "\" -ssl -port 465 -auth-login " +
@@ -480,10 +481,10 @@ string UserInfo::capitalize(string name){//capitalize name for format
 	
 	logger.log("INFO", "Name was formatted successfully");
 }
-string UserInfo::getName() const { //getter name
+string UserInfo::getName(){ //getter name
 	return name;
 }
-string UserInfo::getEmail() const {//getter email
+string UserInfo::getEmail(){//getter email
 	return email;
 }
 void UserInfo::setLogger(Log log){//assigns static logger member
@@ -754,7 +755,7 @@ int AlarmList::writeList(){ //appends an alarm to the file of alarms
 	logger.log("INFO", "Alarm file written successfully");
 	return 0;
 }
-int AlarmList::runAlarm(){//runs in a loop handling the alarm system and alarms themselves
+void AlarmList::runAlarm(){//runs in a loop handling the alarm system and alarms themselves
 	
 	int exitVal;
 	int triggerVal;
@@ -775,7 +776,7 @@ int AlarmList::runAlarm(){//runs in a loop handling the alarm system and alarms 
 		sleep(sleepTime);
 		cout << "\tCurrent time: " << (ltm->tm_hour) << ":" << (ltm->tm_min) << ":" << (ltm->tm_sec) << endl;
 		
-		if (ltm->tm_hour % 10 == 0 && ltm->tm_min ==0 && ltm->tm_sec==0)//log every 10 minutes
+		if (ltm->tm_min%10 ==0 && ltm->tm_sec==0)//log every 10 minutes
 			logger.log("TRCE","Running alarm system");
 		
 		exitVal = gpio_get_value(EXIT_PIN);
@@ -833,10 +834,6 @@ int AlarmList::runAlarm(){//runs in a loop handling the alarm system and alarms 
 	gpioRelease(EXIT_PIN, rqExit);
 	gpioRelease(TRIGGER_PIN, rqTrigger);
 	gpioRelease(BUZZER_PIN, rqBuzzer);
-	
-	return 0;
-	
-	
 	
 }
 int AlarmList::addAlarm(){ //gets input for appending alarm and does it on the fly
@@ -941,7 +938,7 @@ int AlarmList::delAlarm(int pos){ //deletes an alarm and writes the changes to t
 
 	return 0;
 }
-int AlarmList::displayList(){ // display list of alarms, user-friendly
+void AlarmList::displayList(){ // display list of alarms, user-friendly
 	
 	if (length){
 		cout<<"\n\tThe following are your alarm(s):\n";
