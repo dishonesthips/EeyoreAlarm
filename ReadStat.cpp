@@ -2,6 +2,7 @@
 #include "ReadStat.hpp"
 #include <fstream>
 
+using namespace std;
 
 Log ReadStat::logger;
 ReadStat::ReadStat(string nameOfFile) {
