@@ -1,5 +1,6 @@
 #include "Log.hpp"
 #include "AlarmList.hpp"
+#include "Mailer.hpp"
 
 #include <fstream>
 #include <iostream>
@@ -403,7 +404,7 @@ int AlarmList::checkName(const string input){//error checks for empty string and
 int AlarmList::checkAlarm(const string alarm){//error checks for HH:MM format 
 	//check alarm for empty string
 	if (alarm.empty()) {
-		cerr << "Error: Empty string!" << endl;
+		logger.log("WARN", "Given empty string, request try again");
 		return -3;
 	}
 	
@@ -415,7 +416,7 @@ int AlarmList::checkAlarm(const string alarm){//error checks for HH:MM format
 	//check for  (weird bug involving cin operator)
 	for (int i = 0; i < alarm.length(); i++) {
 		if (alarm[i] == '') {
-			cerr << "Don't use arrow keys!" << endl;
+			logger.log("WARN", "Given invalid time given, request try again");
 			return -3;
 		}
 	}
@@ -423,50 +424,50 @@ int AlarmList::checkAlarm(const string alarm){//error checks for HH:MM format
 	//check for digits only before and after the colon
 	while (alarm[count] != ':') {
 		if (alarm[count] < '0' || alarm[count] > '9') {
-			cerr << "Error: Digits only!" << endl;
+			logger.log("WARN", "Given time with invalid digits, request try again");
 			return -3;
 		}
 		count++;
 		numHoursDigits++;
 		if (numHoursDigits > 2) {
-			cerr << "Error: Too many digits" << endl;
+			logger.log("WARN", "Given time with invalid digits, request try again");
 			return -3;
 		}
 	}
 	count++;
 	while (alarm[count]) {
 		if (alarm[count] < '0' || alarm[count] > '9') {
-			cerr << "Digits only!" << endl;
+			logger.log("WARN", "Given time with invalid digits, request try again");
 			return -3;
 		}
 		count++;
 		numMinutesDigits++;
 		if (numMinutesDigits > 2) {
-			cerr << "Error: Too many digits" << endl;
+			logger.log("WARN", "Given time with invalid digits, request try again");
 			return -3;
 		}
 	}
 	
 	//valid time (0 <= hours <= 24, 0 <= minutes <= 59)
 	if (numHoursDigits != 2 || numMinutesDigits != 2) {
-		cerr << "Error: Invalid time" << endl;
+			logger.log("WARN", "Given invalid time, request try again");
 		return -3;
 	}
 	
 	if (alarm[0] < '0' || alarm[0] > '2') {
-		cerr << "Error: Invalid time" << endl;
+			logger.log("WARN", "Given invalid time, request try again");
 		return -3;
 	}
 	if (alarm[0] == '2' && alarm[1] > '3') {
-		cerr << "Error: Invalid time" << endl;
+			logger.log("WARN", "Given invalid time, request try again");
 		return -3;
 	}
 	if (alarm[3] < '0' || alarm[3] > '5') {
-		cerr << "Error: Invalid time" << endl;
+			logger.log("WARN", "Given invalid time, request try again");
 		return -3;
-	}
-	
-	//whoa
+	}	
+	logger.log("INFO", "Time is valid.");
+
 	return 0;
 }
 int AlarmList::checkDate(const string date, const string alarm){//non zero if given date and time have passed
