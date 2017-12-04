@@ -20,7 +20,7 @@ class Log {
 class UserInfo {
 	public:
 		const string filename = "userInfo.txt";
-		UserInfo(Log log);	//declare constructor
+		UserInfo();	//declare constructor
 		
 		//declare functions
 		bool fileNotExist();
@@ -28,7 +28,11 @@ class UserInfo {
 		string getEmail();
 		void writeInfo();
 		void readInfo();
+		static void setLogger(Log log);
 		
+		
+		static Log logger;
+
 	private:
 		//declare private variables
 		string name;
@@ -39,14 +43,16 @@ class UserInfo {
 		static int checkName(const string input);
 		static int checkEmail(const string input);
 		
-		Log logger;
 };
 class Alarm{
 	public:
 		static const int maxSecondsPlaying = 60;
 		
 		Alarm();
-		void resetAlarm();
+		void resetAlarm();		
+		static void setLogger(Log log);
+		static Log logger;
+
 
 		int tick(tm* timeStruct, int motionState); //return 1 or 0 if buzzer should be on/off for this alarm
 		
@@ -58,6 +64,7 @@ class Alarm{
 		string getAlarmSchedule();
 		bool getOneTime();
 		string getFormatTime();
+
 		
 		string printAlarm();
 		string displayAlarm();
@@ -70,6 +77,7 @@ class Alarm{
 		string schedule; //represents either days to go off or a single date
 		
 		void writeStat(int day, int time);
+		
 		
 };
 class AlarmList{
@@ -84,14 +92,17 @@ class AlarmList{
 		
 		const string filename = "alarms.txt";
 		
-		AlarmList(Log log);
+		AlarmList();
 		int runAlarm();
 		int addAlarm();
 		int delAlarm();
 		int readList();
 		int writeList();
 		int displayList();
-		
+		static Log logger;
+
+		static void setLogger(Log log);
+
 	private:
 		Alarm* alarms;
 		int length;
@@ -110,7 +121,6 @@ class AlarmList{
 		int rqTrigger;
 		int rqBuzzer;
 		
-		Log logger;
 };
 class ReadStat {
 	public:
@@ -144,13 +154,16 @@ class ReadStat {
 };
 class ReadStatList {
 	public:
-		ReadStatList(Log log);
+		static Log logger;
+
+		ReadStatList();
 		int runStats();
+		static void setLogger(Log log);
+
 		const int length = 10;
 		const int lengthDays = 7;
 	private:
 		ReadStat* stats[10];
-		Log logger;
 };
 
 
@@ -184,10 +197,11 @@ void Log::log(string severity, string message){ //logs a given message
 
 
 //UserInfo member function definitions
-UserInfo::UserInfo(Log log){ //constructor
+Log UserInfo::logger;
+
+UserInfo::UserInfo(){//constructor
 	name = "";
 	email = "";
-	logger = log;
 }
 void UserInfo::writeInfo(){//write info to a file with paramters info
 	//declare strings to be written to file
@@ -216,7 +230,7 @@ void UserInfo::writeInfo(){//write info to a file with paramters info
 	outfile << nameFile << "," << emailFile << "\r\n";
 	outfile.close();
 	
-	log.logger("INFO", "User info writing successful");
+	logger.log("INFO", "User info writing successful");
 }
 void UserInfo::readInfo(){//read info from a file and sets values of object UserInfo accordingly
 
@@ -279,7 +293,7 @@ int UserInfo::checkName(const string input){//static error check valid name
 int UserInfo::checkEmail(const string input){//static error check valid email
 	//check for empty string
 	if (input.empty()) {
-		logger("WARN", "Given empty string for email, request try again");
+		logger.log("WARN", "Given empty string for email, request try again");
 		return -3;
 	}
 	
@@ -366,7 +380,7 @@ string UserInfo::capitalize(string name){//capitalize name for format
 	//return capitalized name
 	return newName;
 	
-	log("INFO", "Name was formatted successfully");
+	logger.log("INFO", "Name was formatted successfully");
 }
 string UserInfo::getName(){ //getter name
 	return name;
@@ -374,8 +388,12 @@ string UserInfo::getName(){ //getter name
 string UserInfo::getEmail(){//getter email
 	return email;
 }
-
+void UserInfo::setLogger(Log log){
+	UserInfo::logger = log;
+}
 //Alarm member function definitions
+Log Alarm::logger;
+
 Alarm::Alarm(){//constructor
 	alarmTime = -1;
 	schedule = "";
@@ -427,10 +445,9 @@ int Alarm::tick(tm* timeStruct, int motionState){
 	}	
 }
 string Alarm::printAlarm(){//Gives alarm in format to be used when writing to file
-	
 	string s;
 	string timeString = to_string(alarmTime);
-	s = alarmName+","+timeString+","+schedule;//+"\r";
+	s = alarmName+","+timeString+","+schedule;
 	return s;
 }
 void Alarm::setAlarmName(const string name){ //setter name
@@ -463,7 +480,6 @@ string Alarm::getFormatTime(){ //getter time in a string format
 		minute = "0" + minute;
 	}
 	return hour+":"+minute;
-	
 }
 string Alarm::displayAlarm() {//similar to printAlarm() but gives it in a more user friendly format
 	string formatSched = "\tName: " + alarmName + "\n";
@@ -500,19 +516,24 @@ void Alarm::writeStat(int day, int time){
 bool Alarm::getOneTime(){
 	return oneTime;
 }
-
+void Alarm::setLogger(Log log){
+	Alarm::logger = log;
+}
 //AlarmList member function declarations
-AlarmList::AlarmList(Log log){
+Log AlarmList::logger;
+
+AlarmList::AlarmList(){
 	alarms = NULL;
 	int length = -1;
-	logger = log;
 	
+	//setting up (requesting pins) logging errors is within these functions
 	int exitRet = gpioSetup(EXIT_PIN, rqExit, 0);
 	int trigRet = gpioSetup(TRIGGER_PIN, rqTrigger, 0);
 	int buzzerRet = gpioSetup(BUZZER_PIN, rqBuzzer, 1);
 	
-	if ((exitRet + trigRet + buzzerRet) != 0)
-		cerr <<"pin setup fucked up"<<endl;
+	if ((exitRet + trigRet + buzzerRet) != 0){
+		logger.log("FATL","Error with pin setup");
+	}
 	
 	gpio_set_value(BUZZER_PIN, 0);
 
@@ -599,6 +620,7 @@ int AlarmList::readList(){ //creates list of alarms from text file. only to be r
 	}
 	infileR.close();
 	
+	logger.log("INFO", "Alarm file read successfully");
 	return 0;
 }
 int AlarmList::writeList(){ //appends an alarm to the file of alarms
@@ -620,10 +642,11 @@ int AlarmList::writeList(){ //appends an alarm to the file of alarms
 		}
 	}
 	else {
-		log.logger("WARN", "Prompted to write file, no alarms to write");
+		logger.log("WARN", "Prompted to write file, no alarms to write");
 		return -1;
 	}
 	
+	logger.log("INFO", "Alarm file written successfully");
 	return 0;
 }
 int AlarmList::runAlarm(){
@@ -752,10 +775,6 @@ int AlarmList::addAlarm(){ //gets input for appending alarm and does it on the f
 	
 	//implement setting
 	const int option = setting[0] - '0';
-	
-	
-	//cout << name<<" "<<(stoi(alarm.substr(0,2)) * 60 + stoi(alarm.substr(3,2)))<<" "<< AlarmList::setAlarmSetting(option, alarm) << endl;
-	
 	Alarm* newAlarms = new Alarm[length + 1];	
 	
 	for (int i = 0; i < length; i++){
@@ -767,15 +786,12 @@ int AlarmList::addAlarm(){ //gets input for appending alarm and does it on the f
 	newAlarms[length].setAlarmTime(stoi(alarm.substr(0,2)) * 60 + stoi(alarm.substr(3,2)));
 	newAlarms[length].setAlarmSchedule(AlarmList::setAlarmSetting(option, alarm));
 	length++;
-
+	
+	//rewrite alarms
 	alarms = newAlarms;
-	
-	//cout << alarms[length].getAlarmName()<<" "<<alarms[length].getAlarmTime()<<" "<< alarms[length].getAlarmSchedule() << endl;
-	
-	
 	writeList();
-	//NICE
 	
+	logger.log("INFO", "Alarm added successfully");
 	return 0;
 }
 int AlarmList::delAlarm(){ //remove an alarm from the list of alarms
@@ -788,19 +804,21 @@ int AlarmList::delAlarm(){ //remove an alarm from the list of alarms
 			getline(cin, posStr);
 		}
 		int pos = stoi(posStr)-1;
-		//int count = 0;
 		delAlarm(pos);
+		logger.log("INFO", "Alarm deleted successfully");
 	}
 	else{
 		string s;
 		cout<<"\n\tHit enter to continue... ";
 		getline(cin, s);
+		logger.log("WARN", "Tried to delete an alarm, no alarms to be deleted, ignored request");
 	}
-		
+	
+	return 0;
 }
 int AlarmList::delAlarm(int pos){
 	if (pos < 0){
-		//cerr
+		//log
 		return -1;
 	}
 	Alarm* newAlarms = new Alarm[length - 1];
@@ -839,7 +857,6 @@ bool AlarmList::isLeapYear(const int year){ //returns true if given year is leap
 	else if (year % 4 == 0)
 		return true;
 	return false;
-
 }
 string AlarmList::setAlarmSetting(const int option, const string alarm){
 	//initialize strings
@@ -861,6 +878,7 @@ string AlarmList::setAlarmSetting(const int option, const string alarm){
 			cerr << "\tPlease enter a valid date (DD/MM/YYYY): ";
 			getline(cin, date);
 		}
+		logger.log("INFO", "Returned a date for alarm schedule");
 		return date;	//will return a date with values separated by '/'
 	}
 	else {
@@ -892,26 +910,20 @@ string AlarmList::setAlarmSetting(const int option, const string alarm){
     }
 	
 	//if 1, 2, 3, or 5
+	logger.log("INFO", "Returned a days of week schedule for schedule");
 	return daysOfWeek;
 }
 int AlarmList::checkName(const string input){//error checks for empty string and issues with cin
 	//check for empty string
 	if (input.empty()) {
-		cerr << "Error: Empty string!" << endl;
+		logger.log("WARN", "Given empty string, request try again");
 		return -2;
 	}
-	/*
-	//test print name COMMENT OUT OF FINAL COPY
-	cout << "Recieved name: ";
-	for (int i = 0; i < input.length(); i++) {
-		cout << input[i] << " ";
-	}
-	cout << endl;
-	*/
+	
 	//check for  (weird bug involving cin operator)
 	for (int i = 0; i < input.length(); i++) {
 		if (input[i] == '') {
-			cerr << "Don't use arrow keys!" << endl;
+			logger.log("WARN", "Given arrow key input for alarm name, request try again");
 			return -2;
 		}
 	}
@@ -991,18 +1003,26 @@ int AlarmList::checkAlarm(const string alarm){
 int AlarmList::checkDate(const string date, const string alarm){
 	//check for empty string
 	if (date.empty()) {
-		cerr << "Error: Empty string!" << endl;
+		logger.log("WARN", "Given empty string for date, request try again");
 		return -5;
+	}
+	
+	//check for  (weird bug involving cin operator)
+	for (int i = 0; i < date.length(); i++) {
+		if (date[i] == '') {
+			logger.log("WARN", "Given arrow key input for date, request try again");
+			return -2;
+		}
 	}
 	
 	//check for format
 	if (date.length() != 10 || date[2] != '/' || date[5] > '/') {
-		cerr << "Error: Check your format" << endl;
+		logger.log("WARN", "Given invalid format for date, request try again");
 		return -5;
 	}
 	for (int i = 0; i < date.length(); i++) {
 		if ((date[i] < '0' || date[i] > '9') && date[i] != '/') {
-			cerr << "Error: Numbers and slashes only" << endl;
+			logger.log("WARN", "Given invalid format for date, request try again");
 			return -5;
 		}
 	}
@@ -1020,31 +1040,29 @@ int AlarmList::checkDate(const string date, const string alarm){
 	
 	//check for zeroes
 	if (day == 0 || month == 0 || year == 0) {
-		
-		cerr << "Error: Invalid date" << endl;
+		logger.log("WARN", "Given invalid date, request try again");
 		return -5;
 	}
-	
 	//check for bad month
 	if (month > 12) {
-		cerr << "Error: Invalid date" << endl;
+		logger.log("WARN", "Given invalid date, request try again");
 		return -5;
 	}
-	
 	//check leap year as an outlier
 	else if (AlarmList::isLeapYear(year) && month == 2 && day > 29) {
-		cerr << "Error: Invalid date" << endl;
+		logger.log("INFO", "Year is leap year");
+		logger.log("WARN", "Given invalid date, request try again");
 		return -5;
 	}
 	else if (!AlarmList::isLeapYear(year) && month == 2 && day > 28) {
-		cerr << "Error: Invalid date" << endl;
+		logger.log("INFO", "Year is leap year");
+		logger.log("WARN", "Given invalid date, request try again");
 		return -5;
 	}
-	
 	//check each day for validitiy with respect to month
 	for (int i = 0; i < numMonths; i++) {
 		if (month == (i + 1) && day > daysInMonths[i]) {
-			cerr << "Invalid date" << endl;
+		logger.log("WARN", "Given invalid date, request try again");
 			return -5;
 		}
 	}
@@ -1055,27 +1073,27 @@ int AlarmList::checkDate(const string date, const string alarm){
 	
 	//cannot choose a date from the past
 	if (year < (ltm->tm_year + 1900)) {
-		cerr << "Choose a year in the future!" << endl;
+		logger.log("WARN", "Given date has passed, request try again");
 		return -5;
 	}
 	else if (year == (ltm->tm_year + 1900)) {
 		if (month < (ltm->tm_mon + 1)) {
-			cerr << "Choose a month in the future!" << endl;
+		logger.log("WARN", "Given date has passed, request try again");
 			return -5;
 		}
 		else if (month == (ltm->tm_mon + 1)) {
 			if (day < ltm->tm_mday) {
-				cerr << "Choose a day in the future!" << endl;
+				logger.log("WARN", "Given date has passed, request try again");
 				return -5;
 			}
 			else if (day == ltm->tm_mday) {
 				if (hour < ltm->tm_hour) {
-					cerr << "Choose a time in the future! (hour)" << endl;
+					logger.log("WARN", "Given date has passed, request try again");
 					return -5;
 				}
 				else if (hour == ltm->tm_hour) {
 					if (minute < ltm->tm_min) {
-						cerr << "Choose a time in the future! (min)" << endl;
+						logger.log("WARN", "Given date has passed, request try again");
 						return -5;
 					}
 				}
@@ -1083,54 +1101,55 @@ int AlarmList::checkDate(const string date, const string alarm){
 		}
 	}
 	
-	//freak off???
+	logger.log("INFO", "Date is valid");
 	return 0;
 }
 int AlarmList::checkYesOrNo(const string yn){//error checks yes or no input
 	//check for empty string
 	if (yn.empty()) {
-		cerr << "Error: Empty string!" << endl;
+		logger.log("WARN", "Given empty string, request try again");
 		return -6;
 	}
 	
 	//check for  (weird bug involving cin operator)
 	for (int i = 0; i < yn.length(); i++) {
 		if (yn[i] == '') {
-			cerr << "Don't use arrow keys!" << endl;
-			return -6;
+			logger.log("WARN", "Given arrow key input for yes or no, request try again");
+			return -2;
 		}
 	}
 	
 	//check for longer than 1 character
 	if (yn.length() > 1) {
-		cerr << "Error: Too long, only input one letter" << endl;
+		logger.log("WARN", "Invalid input for yes or no, request try again");
 		return -6;
 	}
 	
 	//check for only a y, n, Y, or N
 	if (yn[0] != 'y' && yn[0] != 'n' && yn[0] != 'Y' && yn[0] != 'N') {
-		cerr << "Error: Invalid character" << endl;
+		logger.log("WARN", "Invalid input for yes or no, request try again");
 		return -6;
 	}
 	
+	logger.log("INFO", "Y or N is valid");
 	return 0;
 }
 int AlarmList::checkRange(const string setting, const int lower, const int higher) {
 	//check setting for empty string
 	if (setting.empty()) {
-		cerr << "Error: Empty string!" << endl;
+		logger.log("WARN", "Given empty string for range, request try again");
 		return -4;
 	}
 	
 	for (int i = 0; i < setting.length(); i++) {
 		if (setting[i]<'0' || setting[i]>'9') {
-			cerr << "Dont use arrow keys, only input numbers" << endl;
+		logger.log("WARN", "Given input other than numbers, request try again");
 			return -2;
 		}
 	}
 	
 	if (stoi(setting)< lower || stoi(setting) > higher) {
-		cerr << "Error: Invalid option" << endl;
+		logger.log("WARN", "Given an invalid option number, request try again");
 		return -4;
 	}
 	
@@ -1179,7 +1198,9 @@ int AlarmList::gpioRelease(const int pinNum, int &rq) {
 	}
 	return 1;
 }
-
+void AlarmList::setLogger(Log log){
+	AlarmList::logger = log;
+}
 //Readstat member function declarations
 ReadStat::ReadStat(string nameOfFile) {
 	data = NULL;
@@ -1374,14 +1395,15 @@ int* ReadStat::getData() {
 }
 
 //ReadStatList member functions
-ReadStatList::ReadStatList(Log log) {
+Log ReadStatList::logger;
+
+ReadStatList::ReadStatList() {
 	string num = "";
 	//populate array of stats, 0-6 are normal, 7-9 are special
 	for (int i = 0; i < length; i++) {
 		num = to_string(i);
 		stats[i] = new ReadStat("stats" + num + ".txt");
 	}
-	logger = log;
 
 }
 int ReadStatList::runStats() {
@@ -1389,6 +1411,7 @@ int ReadStatList::runStats() {
 	for (int i = 0; i < lengthDays; i++) {
 		stats[i]->readData();
 	}
+	
 	
 	//unique reads for the special statistics
 	//first find the total length of the array
@@ -1448,16 +1471,27 @@ int ReadStatList::runStats() {
 	}
 	return 0;
 }
+void ReadStatList::setLogger(Log log){
+	ReadStatList::logger = log;
+}
+
+
 
 int main(const int argc, const char* const args[]){
 	Log logger;
-	UserInfo user= UserInfo(logger);
-	AlarmList alarmList = AlarmList(logger);
-	alarmList.readList();
-	cout<<"allgood"<<endl;
+	UserInfo::setLogger(logger);
+	Alarm::setLogger(logger);
+	AlarmList::setLogger(logger);
+	ReadStatList::setLogger(logger);
 
-	ReadStatList stats = ReadStatList(logger);
-	cout<<"allgood"<<endl;
+	
+	
+	UserInfo user= UserInfo();
+	AlarmList alarmList = AlarmList();
+
+	alarmList.readList();
+
+	ReadStatList stats = ReadStatList();
 
 	
 	bool exit = false;
@@ -1521,11 +1555,11 @@ int main(const int argc, const char* const args[]){
 			getline(cin,menuAnswer);
 		}
 		else if(menuAnswer[0] == '7'){//Exit
-			logger.log("TRACE","Manual request to exit program");
+			logger.log("TRCE","Manual request to exit program");
 			exit = true;
 		}
 		else{
-			logger.log("WARNING","Error checking menuAnswer went wrong, treated as if exit request;");
+			logger.log("WARN","Error checking menuAnswer went wrong, treated as if exit request;");
 			exit = true;
 		}
 
