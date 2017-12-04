@@ -1,6 +1,8 @@
 #ifndef ALARM
 #define ALARM
 #include <string>
+#include "Log.hpp"
+#include "Mailer.hpp"
 class Alarm{
 	public:
 		static const int maxSecondsPlaying = 60;

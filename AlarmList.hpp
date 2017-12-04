@@ -2,6 +2,8 @@
 #define ALARMLIST
 
 #include "Alarm.hpp"
+#include "Log.hpp"
+
 #include <string>
 
 class AlarmList{
