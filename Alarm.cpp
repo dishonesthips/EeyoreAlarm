@@ -7,7 +7,6 @@
 #include <unistd.h>
 #include <fstream>
 
-
 using namespace std;
 
 Log Alarm::logger;
@@ -20,6 +19,7 @@ Alarm::Alarm(){//constructor
 	ongoing = false;
 	
 }
+
 int Alarm::tick(tm* timeStruct, int motionState){ //returns 1 if buzzer should be currently going off, else 0
 	//determine if the alarm is due to go off sometime today
 	bool goOffToday = false;
@@ -68,12 +68,14 @@ int Alarm::tick(tm* timeStruct, int motionState){ //returns 1 if buzzer should b
 		return 0;
 	}
 }
+
 string Alarm::printAlarm(){//Gives alarm in format to be used when writing to file
 	string s;
 	string timeString = to_string(alarmTime);
 	s = alarmName+","+timeString+","+schedule;
 	return s;
 }
+
 string Alarm::displayAlarm() {//similar to printAlarm() but gives it in a more user friendly format
 	string formatSched = "\tName: " + alarmName + "\n";
 	
@@ -96,6 +98,7 @@ string Alarm::displayAlarm() {//similar to printAlarm() but gives it in a more u
 
 	return formatSched;
 }
+
 void Alarm::resetAlarm(){//resets alarm; called when an alarm needs to be turned off
 	ongoing = false;
 }
@@ -103,27 +106,36 @@ void Alarm::resetAlarm(){//resets alarm; called when an alarm needs to be turned
 void Alarm::setLogger(Log log){//assigns static logger member
 	Alarm::logger = log;
 }
+
 void Alarm::setAlarmName(const string name){ //setter name
 	alarmName = name;
 }
+
 void Alarm::setAlarmTime(const int aTime){ //setter time
 	alarmTime = aTime;
 }
+
 void Alarm::setAlarmSchedule(const string sched){ //setter schedule
 	schedule = sched;
-	if (sched[2] == '/') //if it is in date format, it must be a one time alarm
+	if (sched[2] == '/') { //if it is in date format, it must be a one time alarm
 		oneTime = true;
+	} else {
+		oneTime = false;
+	}
 }
 
 string Alarm::getAlarmName(){ //getter name
 	return alarmName;
 }
+
 int Alarm::getAlarmTime(){ //getter time
 	return alarmTime;
 }
+
 string Alarm::getAlarmSchedule(){ //getter schedule
 	return schedule;
 }
+
 string Alarm::getFormatTime(){ //getter time in a string format (eg. 01:05)
 	string hour = to_string(alarmTime/60);
 	if (hour.length() == 1) {
@@ -135,10 +147,10 @@ string Alarm::getFormatTime(){ //getter time in a string format (eg. 01:05)
 	}
 	return hour+":"+minute;
 }
+
 bool Alarm::getOneTime(){ //returns whether this is a one time alarm
 	return oneTime;
 }
-
 
 void Alarm::writeStat(int day, int time){ //writes an integer to a statistics file
 	ofstream statfile;
@@ -148,5 +160,3 @@ void Alarm::writeStat(int day, int time){ //writes an integer to a statistics fi
 	statfile.close();
 	logger.log("INFO","Successfully wrote a stat.");
 }
-
-
