@@ -1,4 +1,6 @@
 #include "Log.hpp"
+#include "ReadStatList.hpp"
+#include "ReadStat.hpp"
 #include <string>
 #include <iostream>
 

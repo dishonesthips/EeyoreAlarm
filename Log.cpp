@@ -2,6 +2,8 @@
 #include <fstream>
 #include <string>
 #include <iomanip>
+#include <time.h>
+#include <unistd.h>
 
 using namespace std;
 

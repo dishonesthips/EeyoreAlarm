@@ -1,8 +1,8 @@
 #include <iostream>
 #include <string>
 #include <fstream>
-#include <math.h>
 #include <stdlib.h>
+#include <time.h>
 #include <unistd.h>
 #include <ugpio/ugpio.h>
 #include <iomanip>
