@@ -29,10 +29,13 @@ AlarmList::AlarmList(){//constructor
 	}
 	
 	gpio_set_value(BUZZER_PIN, 0);
-
-	
 }
-
+AlarmList::~AlarmList(){//run when program exits
+	//release the pins
+	gpioRelease(EXIT_PIN, rqExit);
+	gpioRelease(TRIGGER_PIN, rqTrigger);
+	gpioRelease(BUZZER_PIN, rqBuzzer);	
+}
 
 int AlarmList::checkRange(const string setting, const int lower, const int higher) {//makes sure input falls within an integer range
 	//check setting for empty string
@@ -99,6 +102,8 @@ void AlarmList::runAlarm(){//runs in a loop handling the alarm system and alarms
 	const int sleepTime = 1;
 	time_t now = time(0);
 	tm* ltm = localtime(&now);
+	
+		
 
 	int buzzerSum;
 	
@@ -166,9 +171,6 @@ void AlarmList::runAlarm(){//runs in a loop handling the alarm system and alarms
 	
 	gpio_set_value(BUZZER_PIN, 0);
 	
-	gpioRelease(EXIT_PIN, rqExit);
-	gpioRelease(TRIGGER_PIN, rqTrigger);
-	gpioRelease(BUZZER_PIN, rqBuzzer);
 	
 }
 int AlarmList::addAlarm(){ //gets input for appending alarm and does it on the fly

@@ -17,6 +17,7 @@ class AlarmList{
 		const std::string filename = "alarms.txt";
 		
 		AlarmList();
+		~AlarmList();
 		
 		static int checkRange(const std::string setting, const int lower, const int higher);
 		static int checkYesOrNo(const std::string yn);

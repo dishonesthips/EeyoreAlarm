@@ -60,7 +60,7 @@ int main() {
 		}
 
 		if(menuAnswer[0] == '1'){//Run Alarm
-			alarmList.runAlarm();
+			alarmList.runAlarm(); 
 		}
 
 		else if(menuAnswer[0] == '2'){//Add an Alarm
