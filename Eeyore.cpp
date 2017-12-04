@@ -142,6 +142,8 @@ class ReadStat {
 		int* getData();
 		const int bucketsLen = 8;
 		
+		static Log logger;
+
 	private:
 		string filename;
 		int* data;
@@ -196,9 +198,8 @@ void Log::log(string severity, string message){ //logs a given message
 }
 
 
-//UserInfo member function definitions
+//UserInfo member definitions
 Log UserInfo::logger;
-
 UserInfo::UserInfo(){//constructor
 	name = "";
 	email = "";
@@ -388,12 +389,12 @@ string UserInfo::getName(){ //getter name
 string UserInfo::getEmail(){//getter email
 	return email;
 }
-void UserInfo::setLogger(Log log){
+void UserInfo::setLogger(Log log){//assigns static logger member
 	UserInfo::logger = log;
 }
-//Alarm member function definitions
-Log Alarm::logger;
 
+//Alarm member  definitions
+Log Alarm::logger;
 Alarm::Alarm(){//constructor
 	alarmTime = -1;
 	schedule = "";
@@ -401,44 +402,45 @@ Alarm::Alarm(){//constructor
 	ongoing = false;
 	
 }
-int Alarm::tick(tm* timeStruct, int motionState){
+int Alarm::tick(tm* timeStruct, int motionState){ //returns 1 if buzzer should be currently going off, else 0
 	//determine if the alarm is due to go off sometime today
 	bool goOffToday = false;
-	
-	if (oneTime){
+	if (oneTime){//if it's a one time alarm we must check the schedule considering it is in DD/MM/YYYY format
 		if	((stoi(schedule.substr(0,2)) == timeStruct->tm_mday) 
 		    && (stoi(schedule.substr(3,2)) == (timeStruct->tm_mon+1))
 			&& (stoi(schedule.substr(6,4)) == (1900+timeStruct->tm_year))){
 				goOffToday = true;
 		}
 	}
-	else{
+	else{//if it is a recurring alarm it is in a binary (eg 0010010) format
 		if(schedule[timeStruct->tm_wday] == '1')
 			goOffToday = true;
 	}
 	if (!goOffToday)
-		return 0;
+		return 0;//buzzer will definitely not go off if the alarm isn't going off today
 	
 	
 	//if the alarm is going off sometime today
+	
 	if (ongoing){//if it is currently going
-		int diff = difftime(mktime(timeStruct),mktime(&timeFreeze));
-		cout<<"Alarm: \""<<alarmName<<"\" is currently active."<<endl;
-		if (diff >= maxSecondsPlaying || motionState){
-			cout<<"Alarm: \""<<alarmName<<"\" was deactivated in "<< diff<< " seconds.\n";
-			writeStat(timeFreeze.tm_wday, diff);
+		int diff = difftime(mktime(timeStruct),mktime(&timeFreeze)); //returns difference in seconds between 2 time structs
+		cout<<"\tAlarm: \""<<alarmName<<"\" is currently active."<<endl;
+		if (diff >= maxSecondsPlaying || motionState){ //either the time is up or it has been deactivated
+			cout<<"\tAlarm: \""<<alarmName<<"\" was deactivated in "<< diff<< " seconds.\n";
+			writeStat(timeFreeze.tm_wday, diff); //write how long it was on to a stats file
 			resetAlarm();
-			
+			logger.log("INFO","Alarm: \""+alarmName+"\" successfully deactivated.");
+
 			return 0;
 		}
 		return 1;
 	}
 	else{//if it is not currently going
 		int currMin = (timeStruct->tm_hour)*60 + timeStruct->tm_min;
-		//cout<<currMin<<" "<<alarmTime<<endl;
 		if (currMin == alarmTime && timeStruct->tm_sec==0){//time to go off is now
 			ongoing = true;
 			timeFreeze = *timeStruct;
+			logger.log("INFO","Alarm: \""+alarmName+"\" successfully activated.");
 			return 1;
 		}
 		return 0;
@@ -458,7 +460,7 @@ void Alarm::setAlarmTime(const int aTime){ //setter time
 }
 void Alarm::setAlarmSchedule(const string sched){ //setter schedule
 	schedule = sched;
-	if (sched[2] == '/')
+	if (sched[2] == '/') //if it is in date format, it must be a one time alarm
 		oneTime = true;
 }
 string Alarm::getAlarmName(){ //getter name
@@ -470,7 +472,7 @@ int Alarm::getAlarmTime(){ //getter time
 string Alarm::getAlarmSchedule(){ //getter schedule
 	return schedule;
 }
-string Alarm::getFormatTime(){ //getter time in a string format
+string Alarm::getFormatTime(){ //getter time in a string format (eg. 01:05)
 	string hour = to_string(alarmTime/60);
 	if (hour.length() == 1) {
 		hour = "0" + hour;
@@ -506,23 +508,24 @@ string Alarm::displayAlarm() {//similar to printAlarm() but gives it in a more u
 void Alarm::resetAlarm(){//resets alarm; called when an alarm needs to be turned off
 	ongoing = false;
 }
-void Alarm::writeStat(int day, int time){
+void Alarm::writeStat(int day, int time){ //writes an integer to a statistics file
 	ofstream statfile;
 	string s = to_string(day);
 	statfile.open("stats" + s + ".txt", ios::app | ios::out);
 	statfile << time << "\r\n";
 	statfile.close();
+	logger.log("INFO","Successfully wrote a stat.");
 }
-bool Alarm::getOneTime(){
+bool Alarm::getOneTime(){ //returns whether this is a one time alarm
 	return oneTime;
 }
-void Alarm::setLogger(Log log){
+void Alarm::setLogger(Log log){//assigns static logger member
 	Alarm::logger = log;
 }
+
 //AlarmList member function declarations
 Log AlarmList::logger;
-
-AlarmList::AlarmList(){
+AlarmList::AlarmList(){//constructor
 	alarms = NULL;
 	int length = -1;
 	
@@ -649,7 +652,7 @@ int AlarmList::writeList(){ //appends an alarm to the file of alarms
 	logger.log("INFO", "Alarm file written successfully");
 	return 0;
 }
-int AlarmList::runAlarm(){
+int AlarmList::runAlarm(){//runs in a loop handling the alarm system and alarms themselves
 	
 	int exitVal;
 	int triggerVal;
@@ -661,12 +664,6 @@ int AlarmList::runAlarm(){
 
 	int buzzerSum;
 	
-	/*
-	cout << "\tYear: " << 1900 + ltm->tm_year<<endl;
-	cout << "\tMonth: "<< 1 + ltm->tm_mon<< endl;
-	cout << "\tDay: "<<  ltm->tm_mday << endl;
-	cout << "\tDays since Sunday: " << ltm->tm_wday << endl;
-	*/
 	
 	while(!exitButtonHit){
 		buzzerSum = 0;
@@ -675,14 +672,14 @@ int AlarmList::runAlarm(){
 		
 		sleep(sleepTime);
 		cout << "\tCurrent time: " << (ltm->tm_hour) << ":" << (ltm->tm_min) << ":" << (ltm->tm_sec) << endl;
-		
+		if (ltm->tm_hour % 10 == 0)
+			logger.log("TRCE","Running alarm system");
 		exitVal = gpio_get_value(EXIT_PIN);
 		triggerVal = gpio_get_value(TRIGGER_PIN);
 		
-		cout<<"exit value" << exitVal<<endl;
-		cout<<"trigger value" << triggerVal<<endl;
 
 		if(exitVal){
+			logger.log("INFO","Manual request to stop running alarm system.");
 			for (int i = 0; i < length; i++){
 				alarms[i].resetAlarm(); //read motionstate
 			}
@@ -722,12 +719,13 @@ int AlarmList::runAlarm(){
 		
 		delAlarm(pos);
 		numToDelete--;
+		
 	}
 	
 	
 	
 	gpio_set_value(BUZZER_PIN, 0);
-	cout<<"freeing pins"<<endl;
+	
 	gpioRelease(EXIT_PIN, rqExit);
 	gpioRelease(TRIGGER_PIN, rqTrigger);
 	gpioRelease(BUZZER_PIN, rqBuzzer);
@@ -805,7 +803,6 @@ int AlarmList::delAlarm(){ //remove an alarm from the list of alarms
 		}
 		int pos = stoi(posStr)-1;
 		delAlarm(pos);
-		logger.log("INFO", "Alarm deleted successfully");
 	}
 	else{
 		string s;
@@ -816,9 +813,9 @@ int AlarmList::delAlarm(){ //remove an alarm from the list of alarms
 	
 	return 0;
 }
-int AlarmList::delAlarm(int pos){
-	if (pos < 0){
-		//log
+int AlarmList::delAlarm(int pos){ //deletes an alarm and writes the changes to the file
+	if (pos < 0 ||pos >=length){
+		logger.log("EROR","Attempted to delete an alarm at a non existent position."); 
 		return -1;
 	}
 	Alarm* newAlarms = new Alarm[length - 1];
@@ -836,6 +833,8 @@ int AlarmList::delAlarm(int pos){
 	
 	alarms = newAlarms;
 	writeList();
+	logger.log("INFO", "Alarm deleted successfully");
+
 	return 0;
 }
 int AlarmList::displayList(){ // display list of alarms, user-friendly
@@ -858,7 +857,7 @@ bool AlarmList::isLeapYear(const int year){ //returns true if given year is leap
 		return true;
 	return false;
 }
-string AlarmList::setAlarmSetting(const int option, const string alarm){
+string AlarmList::setAlarmSetting(const int option, const string alarm){ //returns a string representing the alarm schedule
 	//initialize strings
 	string daysOfWeek;
 	string input;
@@ -931,7 +930,7 @@ int AlarmList::checkName(const string input){//error checks for empty string and
 	//valid name
 	return 0;
 }
-int AlarmList::checkAlarm(const string alarm){
+int AlarmList::checkAlarm(const string alarm){//error checks for HH:MM format 
 	//check alarm for empty string
 	if (alarm.empty()) {
 		cerr << "Error: Empty string!" << endl;
@@ -1000,7 +999,7 @@ int AlarmList::checkAlarm(const string alarm){
 	//whoa
 	return 0;
 }
-int AlarmList::checkDate(const string date, const string alarm){
+int AlarmList::checkDate(const string date, const string alarm){//non zero if given date and time have passed
 	//check for empty string
 	if (date.empty()) {
 		logger.log("WARN", "Given empty string for date, request try again");
@@ -1134,7 +1133,7 @@ int AlarmList::checkYesOrNo(const string yn){//error checks yes or no input
 	logger.log("INFO", "Y or N is valid");
 	return 0;
 }
-int AlarmList::checkRange(const string setting, const int lower, const int higher) {
+int AlarmList::checkRange(const string setting, const int lower, const int higher) {//makes sure input falls within an integer range
 	//check setting for empty string
 	if (setting.empty()) {
 		logger.log("WARN", "Given empty string for range, request try again");
@@ -1155,7 +1154,9 @@ int AlarmList::checkRange(const string setting, const int lower, const int highe
 	
 	return 0;
 }
-int AlarmList::gpioSetup(const int pinNum, int &rq, const int pinMode) {
+int AlarmList::gpioSetup(const int pinNum, int &rq, const int pinMode) { //requests pins for use
+	string pinN= to_string(pinNum);
+	logger.log("TRCE","Attempting to set up pin "+pinN);
 	int rv;
 	// check if gpio is already exported
 	if ((rq = gpio_is_requested(pinNum)) < 0) {
@@ -1185,9 +1186,14 @@ int AlarmList::gpioSetup(const int pinNum, int &rq, const int pinMode) {
 			return -1;
 		}
 	}
+	logger.log("INFO","Successfully set up pin "+pinN);
 	return 0;
 }
-int AlarmList::gpioRelease(const int pinNum, int &rq) {
+int AlarmList::gpioRelease(const int pinNum, int &rq) {//frees pins
+	string pinN= to_string(pinNum);
+
+	logger.log("TRCE","Attempting to release pin "+pinN);
+
 	if (!rq) {
 		if (gpio_free(pinNum) < 0) {
 			cerr << "Error: Could not free GPIO pin " << pinNum <<
@@ -1196,12 +1202,15 @@ int AlarmList::gpioRelease(const int pinNum, int &rq) {
 		}
 		return 0;
 	}
+	logger.log("INFO","Successfully released pin "+pinN);
+
 	return 1;
 }
-void AlarmList::setLogger(Log log){
+void AlarmList::setLogger(Log log){ //assigns static logger member
 	AlarmList::logger = log;
 }
 //Readstat member function declarations
+Log ReadStat::logger;
 ReadStat::ReadStat(string nameOfFile) {
 	data = NULL;
 	length = 0;
@@ -1214,58 +1223,62 @@ ReadStat::ReadStat(string nameOfFile) {
 		buckets[i] = 0;
 	}
 }
-void ReadStat::readData() {
+void ReadStat::readData() {//reads standard stats for days of week
+	//only read if file exists
 	if (fileExists()) {
+		//initalize variables
 		string line = "";
+		length = 0;
 		ifstream statfile;
 		statfile.open(filename);
-		length = 0;
+		
+		//calculate amount of datapoints in file
 		while(!statfile.eof()){
 			getline(statfile, line);
-
 			if(!line.empty() && line.compare("\r")!= 0)
 				length++;
 		}
+		statfile.close();
 		line = "";
 
-		statfile.close();
+		//start reading again now that length is known
 		ifstream statfileR;
 		statfileR.open(filename);
 		
+		//create a new array for entries and assign to data
 		int* tmp = data;
 		data = new int[length];
 		delete tmp;
 		
+		//populate the array
 		for (int i = 0; i < length; i++) {
 			getline(statfileR, line);
-			cout<<line<<" "<<stoi(line)<<endl;
 			data[i] = stoi(line);
 		}
-		
 		statfileR.close();
 	}
 	else {
-		//cout << "File does not exist -__-" << endl;
+		logger.log("WARN", "Tried to read stat file" + filename + ", does not exist, ignored");
 	}
 }
-void ReadStat::specialDataLen(const int newLen) {
+void ReadStat::specialDataLen(const int newLen) {//used to calculate length of special datasets
 	data = new int[newLen];
 	length = 0;
 }
-void ReadStat::specialData(const int newLen, const int* dataset) {
+void ReadStat::specialData(const int newLen, const int* dataset) {//calculates special datasets
 	for (int i = length; i < newLen + length; i++) {
 		data[i] = dataset[i - length];
 	}
 	length += newLen;
 }
-void ReadStat::setMax() {
+void ReadStat::setMax() {//calculate max value of dataset
 	max = data[0];
 	for (int i = 0; i < length; i++) {
 		if (data[i] > max)
 			max = data[i];
 	}
 }
-void ReadStat::setMin() {
+void ReadStat::setMin() {//calculate min value of dataset
 	min = data[0];
 	
 	for (int i = 0; i < length; i++) {
@@ -1273,7 +1286,7 @@ void ReadStat::setMin() {
 			min = data[i];
 	}
 }
-void ReadStat::setMean() {
+void ReadStat::setMean() {//calculate mean value of dataset
 	mean = 0;
 	sort();
 	for (int i = 0; i < length; i++) {
@@ -1281,7 +1294,7 @@ void ReadStat::setMean() {
 	}
 	mean /= length;
 }
-void ReadStat::sort() {
+void ReadStat::sort() {//sort dataset
 	int temp;
 	for (int i = 0; i < length; i++) {
 		for (int j = 0; j < length - 1; j++) {
@@ -1293,13 +1306,13 @@ void ReadStat::sort() {
 		}
 	}
 }
-void ReadStat::setMedian() {
+void ReadStat::setMedian() {//calculate median value of dataset
 	if (length % 2)
 		median = data[length / 2];
 	else
 		median = ((data[length / 2 - 1] + data[length / 2]) / 2);
 }
-void ReadStat::histogram() {
+void ReadStat::histogram() {//calculate a histogram for dataset
 	for (int i = 0; i < length; i++) {
 		if (data[i] < 10)
 			buckets[0]++;
@@ -1311,7 +1324,7 @@ void ReadStat::histogram() {
 			buckets[((data[i] - 1) / 60) + 2]++;
 	}
 }
-bool ReadStat::fileExists() {
+bool ReadStat::fileExists() {//check if file exists
 	ifstream statfile;
 	statfile.open(filename);
 	if(statfile.is_open()) {
@@ -1321,8 +1334,9 @@ bool ReadStat::fileExists() {
 	statfile.close();
 	return false; //file does not exist (yet) :smirk:
 }
-string* ReadStat::getStats() {
+string* ReadStat::getStats() {//process all statistics
 	string* printStats;
+	//do if there is data
 	if (length > 0) {
 		int daysInWeek = 7;
 		string daysOfWeek[7];
@@ -1333,6 +1347,7 @@ string* ReadStat::getStats() {
 		setMedian();
 		histogram();
 		
+		//add all printing to a string array to allow for good formatting between program and summary file
 		printStats = new string[13];
 		printStats[0] = "Max: " + to_string(max) + "\r\n";
 		printStats[1] = "Min: " + to_string(min) + "\r\n";
@@ -1346,15 +1361,15 @@ string* ReadStat::getStats() {
 		printStats[9] = "[2,3) min: " + to_string(buckets[4]) + "\r\n";
 		printStats[10] = "[3,4) min: " + to_string(buckets[5]) + "\r\n";
 		printStats[11] = "[4,5) min: " + to_string(buckets[6]) + "\r\n";
-		printStats[12] = "[5-10] min: " + to_string(buckets[7]) + "\r\n";						  
+		printStats[12] = "[5-10] min: " + to_string(buckets[7]) + "\r\n";					  
 	}
 	else {
 		printStats = new string[1];
-		printStats[0] = "No stats\r\n";
+		printStats[0] = "There is no data available for this period\r\n";
 	}
 	return printStats;
 }
-void ReadStat::displayStats() {
+void ReadStat::displayStats() {//display stats
 	string* printStats = getStats();
 	if (length > 0) {
 		cout << endl << endl;
@@ -1368,35 +1383,43 @@ void ReadStat::displayStats() {
 	}
 	//delete printStats;
 }
-void ReadStat::writeStats(const string* printStats, const string title) {
+void ReadStat::writeStats(const string* printStats, const string title) {//write stats to summary file
 	ofstream writefile;
+	
+	//write sunday first with format, at this time overwrite whichever file previously existed or make one if it didn't
 	if (!title.compare("SUNDAY")) {
 		writefile.open("Statistics Summary.stat");
 		writefile << "STATISTICS SUMMARY\r\n__________________\r\n";
 	}
+	//otherwise, append
 	else
 		writefile.open("Statistics Summary.stat", ios::app | ios:: out);
 	
+	//write stats with formating
 	writefile << "\r\n" << title << ":\r\n";
 	if (length > 0) {
 		for (int i = 0; i < 13; i++) {
 			writefile << printStats[i] << endl;
 		}
 	}
+	//write no data if no data
 	else
 		writefile << printStats[0] << endl;
 	writefile.close();
+	logger.log("INFO", "Writing and printing stats success");
 }
-int ReadStat::getLength() {
+int ReadStat::getLength() {//get amount of data points
 	return length;
 }
-int* ReadStat::getData() {
+int* ReadStat::getData() {//get data in an int array
 	return data;
+}
+void ReadStat::setLogger(Log log) {//logger
+	ReadStat::logger = log;
 }
 
 //ReadStatList member functions
 Log ReadStatList::logger;
-
 ReadStatList::ReadStatList() {
 	string num = "";
 	//populate array of stats, 0-6 are normal, 7-9 are special
@@ -1406,7 +1429,7 @@ ReadStatList::ReadStatList() {
 	}
 
 }
-int ReadStatList::runStats() {
+int ReadStatList::runStats() {//run stats
 	//simple read for the days of the week stats
 	for (int i = 0; i < lengthDays; i++) {
 		stats[i]->readData();
@@ -1443,7 +1466,10 @@ int ReadStatList::runStats() {
 		stats[9]->specialData(stats[i]->getLength(), stats[i]->getData());
 	}
 	
+	//make an array of day name for formatting
 	string titles[10] = {"SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "WEEKDAYS", "WEEKENDS", "TOTAL"};
+	
+	//ask user which stats to view
 	cout << "\n\n\tList of Statistics " << endl <<
 			"\t1. Sunday" << endl <<
 			"\t2. Monday" << endl <<
@@ -1463,19 +1489,19 @@ int ReadStatList::runStats() {
 		getline(cin, statNum);
 	}
 	
+	//display the desired statistics
 	stats[stoi(statNum) - 1]->displayStats();
 	
+	//write all statistics to summary file
 	stats[0]->writeStats(stats[0]->getStats(), titles[0]);
 	for (int i = 1; i < 10; i++) {
 		stats[i]->writeStats(stats[i]->getStats(), titles[i]);
 	}
 	return 0;
 }
-void ReadStatList::setLogger(Log log){
+void ReadStatList::setLogger(Log log){//logger
 	ReadStatList::logger = log;
 }
-
-
 
 int main(const int argc, const char* const args[]){
 	Log logger;
