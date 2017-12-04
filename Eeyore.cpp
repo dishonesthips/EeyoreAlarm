@@ -141,9 +141,9 @@ class ReadStat {
 		int getLength();
 		int* getData();
 		const int bucketsLen = 8;
-		
+		static void setLogger(Log);
 		static Log logger;
-
+		
 	private:
 		string filename;
 		int* data;
@@ -1420,7 +1420,7 @@ void ReadStat::setLogger(Log log) {//logger
 
 //ReadStatList member functions
 Log ReadStatList::logger;
-ReadStatList::ReadStatList() {
+ReadStatList::ReadStatList() {//constructor
 	string num = "";
 	//populate array of stats, 0-6 are normal, 7-9 are special
 	for (int i = 0; i < length; i++) {
@@ -1508,6 +1508,7 @@ int main(const int argc, const char* const args[]){
 	UserInfo::setLogger(logger);
 	Alarm::setLogger(logger);
 	AlarmList::setLogger(logger);
+	ReadStat::setLogger(logger);
 	ReadStatList::setLogger(logger);
 
 	
