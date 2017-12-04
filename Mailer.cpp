@@ -70,7 +70,7 @@ void Mailer::updateInfo(string name, string email){
 
 int Mailer::sendMail(const string subject, const string bodyFile) {
 	//construct command string
-	cout << "\n\tSending...check the email: " << userAddress << " soon."<< endl;
+	cout << "\n\tSending...check the email: " << userAddress << endl;
 
 	string command = "mailsend -to \"" + userAddress +
 		"\" -from \"" + sourceAddress + "\" -ssl -port 465 -auth-login " +
