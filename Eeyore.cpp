@@ -6,10 +6,16 @@
 #include <unistd.h>
 #include <ugpio/ugpio.h>
 #include <iomanip>
-
+#include "Log.hpp"
+#include "Mailer.hpp"
+#include "UserInfo.hpp"
+#include "Alarm.hpp"
+#include "AlarmList.hpp"
+#include "ReadStat.hpp"
+#include "ReadStatList.hpp"
 using namespace std;
 
-
+/*
 //class declarations
 class Log {
 	public:
@@ -1603,7 +1609,7 @@ int ReadStatList::runStats() {//run stats
 void ReadStatList::setLogger(Log log){//logger
 	ReadStatList::logger = log;
 }
-
+*/
 int main(const int argc, const char* const args[]){
 	Log logger;
 	UserInfo::setLogger(logger);

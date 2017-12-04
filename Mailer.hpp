@@ -14,8 +14,6 @@ class Mailer {
 		int sendTimeout(const std::string alarmName, int timeoutLength);
 		void updateInfo(string name, string email);
 		
-
-
 	private:
 		int sendMail(const std::string subject, const std::string bodyFile);
 
