@@ -1,7 +1,6 @@
 # Eeyore Alarm #
 
 This is an alarm that doesn't turn off until you leave your room.
-Please do not depend on it to actually work if you need to wake up.
 
 ## Dependencies ##
 
